@@ -28,7 +28,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: Props) {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState('');
 
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
@@ -48,11 +48,11 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: Props) {
       description,
     });
 
-    // Reset
+    // Reset form
     setAmount('');
     setCategory('');
     setCustomCategory('');
-    setDate('');
+    setDate(new Date().toISOString().slice(0, 10));
     setDescription('');
     setType('expense');
     onClose();
