@@ -4,20 +4,17 @@ import { useState } from 'react';
 
 interface Props {
   transactions: Transaction[];
-  selectedMonth: string;
 }
 
-export default function TransactionList({ transactions, selectedMonth }: Props) {
+export default function TransactionList({ transactions }: Props) {
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense' | 'personal'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
 
-  const filtered = transactions
-    .filter(tx => tx.date.startsWith(selectedMonth))
-    .filter(tx => {
-      if (activeType === 'all') return true;
-      if (activeType === 'personal') return tx.category.toLowerCase().includes('personal');
-      return tx.type === activeType;
-    });
+  const filtered = transactions.filter(tx => {
+    if (activeType === 'all') return true;
+    if (activeType === 'personal') return tx.category.toLowerCase().includes('personal');
+    return tx.type === activeType;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     if (sort === 'newest') return b.date.localeCompare(a.date);
