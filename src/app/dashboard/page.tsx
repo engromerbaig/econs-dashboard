@@ -4,6 +4,9 @@ import { useState } from 'react';
 import AddTransactionModal, { Transaction } from '@/components/AddTransactionModal';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
+import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
+
+
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -63,6 +66,14 @@ export default function DashboardPage() {
         >
           + Add Transaction
         </button>
+
+        <button
+  onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
+  className="bg-gray-200 text-black px-4 py-2 rounded border border-gray-300 hover:bg-gray-300"
+>
+  ⬇️ Export CSV
+</button>
+
       </div>
 
       {/* Transactions & Summary */}
