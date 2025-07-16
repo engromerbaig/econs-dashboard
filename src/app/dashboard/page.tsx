@@ -115,7 +115,7 @@ export default function DashboardPage() {
       {/* Transactions & Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 <TransactionList transactions={filtered} />
-        <TransactionSummary transactions={transactions} selectedMonth={selectedMonth} />
+        <TransactionSummary transactions={filtered} />
       </div>
 
       {/* Modal */}
