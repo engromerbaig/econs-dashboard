@@ -15,13 +15,11 @@ export default function DashboardPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // ✅ Fetch transactions from API when component mounts
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         const res = await fetch('/api/transactions');
         const data = await res.json();
-
         if (data.status === 'success') {
           setTransactions(data.transactions);
         } else {
@@ -34,7 +32,6 @@ export default function DashboardPage() {
 
     fetchTransactions();
   }, []);
-
 
   const handleAdd = (tx: Transaction) => {
     setTransactions([tx, ...transactions]);
@@ -61,16 +58,16 @@ export default function DashboardPage() {
 
   const totalIncome = filtered.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
   const totalExpense = filtered.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-  const companyProfit = totalIncome - totalExpense;
-  const personalExpense = 0; // future support
-  const totalNet = companyProfit - personalExpense;
+  const salaryTotal = filtered
+    .filter(tx => tx.category.toLowerCase().includes('salary'))
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
     <main className="min-h-screen p-6 bg-white">
       <h1 className="text-2xl font-bold mb-4">Econs Dashboard</h1>
 
       {/* Summary Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <div className="p-4 bg-green-100 rounded shadow">
           <h2 className="text-sm font-semibold">Income</h2>
           <p className="text-lg font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
@@ -81,15 +78,11 @@ export default function DashboardPage() {
         </div>
         <div className="p-4 bg-blue-100 rounded shadow">
           <h2 className="text-sm font-semibold">Company Profit</h2>
-          <p className="text-lg font-bold">PKR {companyProfit.toLocaleString('en-IN')}</p>
+          <p className="text-lg font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
         </div>
-        <div className="p-4 bg-yellow-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Personal Expense</h2>
-          <p className="text-lg font-bold">PKR {personalExpense.toLocaleString('en-IN')}</p>
-        </div>
-        <div className="p-4 bg-purple-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Total Net</h2>
-          <p className="text-lg font-bold">PKR {totalNet.toLocaleString('en-IN')}</p>
+        <div className="p-4 bg-indigo-100 rounded shadow">
+          <h2 className="text-sm font-semibold">Salary Total</h2>
+          <p className="text-lg font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
         </div>
       </div>
 
@@ -135,7 +128,7 @@ export default function DashboardPage() {
 
       {/* Transactions & Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-<TransactionList transactions={filtered} />
+        <TransactionList transactions={filtered} />
         <TransactionSummary transactions={filtered} />
       </div>
 
@@ -144,6 +137,8 @@ export default function DashboardPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
+          existingTransactions={transactions}
+
       />
     </main>
   );
