@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AddTransactionModal, { Transaction } from '@/components/AddTransactionModal';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
@@ -14,6 +14,27 @@ export default function DashboardPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // ✅ Fetch transactions from API when component mounts
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const res = await fetch('/api/transactions');
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          setTransactions(data.transactions);
+        } else {
+          console.error('Failed to fetch transactions:', data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
 
   const handleAdd = (tx: Transaction) => {
     setTransactions([tx, ...transactions]);

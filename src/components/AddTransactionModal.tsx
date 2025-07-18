@@ -33,30 +33,54 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: Props) {
 
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
-  const handleSubmit = () => {
-    if (!amount || !date || (!category && !customCategory)) {
-      alert('Fill all required fields');
-      return;
-    }
+  const handleSubmit = async () => {
+  if (!amount || !date || (!category && !customCategory)) {
+    alert('Fill all required fields');
+    return;
+  }
 
-    onAdd({
-      id: Date.now(),
-      type,
-      date,
-      amount: parseInt(amount),
-      category: customCategory || category,
-      description,
+  const newTransaction = {
+    type,
+    date,
+    amount: parseInt(amount),
+    category: customCategory || category,
+    description,
+  };
+
+  try {
+    const response = await fetch('/api/transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newTransaction),
     });
 
-    // Reset form
-    setAmount('');
-    setCategory('');
-    setCustomCategory('');
-    setDate(new Date().toISOString().slice(0, 10));
-    setDescription('');
-    setType('expense');
-    onClose();
-  };
+    const data = await response.json();
+
+    if (response.ok) {
+      onAdd({ id: Date.now(), ...newTransaction }); // Add to local UI
+      onClose();
+
+      // Reset form
+      setAmount('');
+      setCategory('');
+      setCustomCategory('');
+      setDate(new Date().toISOString().slice(0, 10));
+      setDescription('');
+      setType('expense');
+    } else {
+      alert(`Error: ${data.message || 'Something went wrong'}`);
+    }
+  } catch (error) {
+    console.error('Submit error:', error);
+    alert('Failed to submit transaction');
+  }
+};
+
+
+
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
