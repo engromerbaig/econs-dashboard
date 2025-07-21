@@ -87,12 +87,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Filters and Actions */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex gap-2 text-sm">
+      <div className="mb-6 flex  flex-wrap items-center gap-4">
+        <div className="flex gap-2  text-sm">
           {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
             <button
               key={mode}
-              className={`px-3 py-1 rounded border ${
+              className={`px-3 py-1 cursor-pointer  rounded border ${
                 filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
               }`}
               onClick={() => setFilterMode(mode as any)}
@@ -120,7 +120,7 @@ export default function DashboardPage() {
 
         <button
           onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
-          className="bg-gray-200 text-black px-4 py-2 rounded border border-gray-300 hover:bg-gray-300"
+          className="bg-gray-200 text-black px-4 py-2 cursor-pointer rounded border border-gray-300 hover:bg-gray-300"
         >
           ⬇️ Export CSV
         </button>

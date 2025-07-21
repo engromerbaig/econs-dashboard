@@ -30,10 +30,10 @@ export default function TransactionList({ transactions }: Props) {
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-3 text-sm font-medium">
-        {['all', 'income', 'expense', 'personal'].map((type) => (
+        {['all', 'income', 'expense'].map((type) => (
           <button
             key={type}
-            className={`px-3 py-1 rounded ${
+            className={`px-3 py-1 rounded cursor-pointer  ${
               activeType === type ? 'bg-black text-white' : 'bg-gray-200 text-black'
             }`}
             onClick={() => setActiveType(type as any)}
