@@ -3,11 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #000000; /* Set to black */
+  --econs-blue: #0B1A79; /* Add custom color variable */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-econs-blue: var(--econs-blue); /* Register custom color for Tailwind */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,6 +18,7 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --econs-blue: #0B1A79; /* Keep econs-blue consistent in dark mode, or adjust if needed */
   }
 }
 
