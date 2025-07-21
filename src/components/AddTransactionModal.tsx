@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Modal from './Modal';
-import { incomeCategories, expenseCategories, salaryMap } from './constants';
+import { incomeCategories, expenseCategories, salaryMap, fixedExpenseMap } from './constants';
 import { Transaction, TransactionType } from './types';
+import { FiEdit } from 'react-icons/fi'; // Using FiEdit from react-icons
+import { FaEdit } from 'react-icons/fa';
 
 interface Props {
   isOpen: boolean;
@@ -27,42 +29,23 @@ export default function AddTransactionModal({
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [employee, setEmployee] = useState('');
+  const [fixedExpense, setFixedExpense] = useState('');
   const [date, setDate] = useState(() => {
-    // Get current month in YYYY-MM format
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    
-    // If we're in month filter mode and selectedMonth is current month, use today's date
-    // Otherwise, use the 1st day of the selected month
     if (filterMode === 'month' && selectedMonth === currentMonth) {
       return now.toISOString().slice(0, 10);
     } else if (filterMode === 'month') {
       return `${selectedMonth}-01`;
     } else {
-      // For other filter modes, default to today
       return now.toISOString().slice(0, 10);
     }
   });
   const [description, setDescription] = useState('');
-  const [allowEditSalary, setAllowEditSalary] = useState(false);
-
-  // Update date when selectedMonth or filterMode changes
-  useEffect(() => {
-    if (isOpen) {
-      const now = new Date();
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (filterMode === 'month' && selectedMonth === currentMonth) {
-        setDate(now.toISOString().slice(0, 10));
-      } else if (filterMode === 'month') {
-        setDate(`${selectedMonth}-01`);
-      } else {
-        setDate(now.toISOString().slice(0, 10));
-      }
-    }
-  }, [selectedMonth, filterMode, isOpen]);
+  const [allowEditAmount, setAllowEditAmount] = useState(false);
 
   const isSalary = type === 'expense' && category === 'Salary';
+  const isFixedExpense = type === 'expense' && category === 'Fixed';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
   const transactionMonth = useMemo(() => {
@@ -83,21 +66,49 @@ export default function AddTransactionModal({
       .filter((emp, i, arr) => arr.indexOf(emp) === i);
   }, [existingTransactions, transactionMonth]);
 
+  const alreadyPaidFixedExpenses = useMemo(() => {
+    return existingTransactions
+      .filter(
+        (tx) =>
+          tx.type === 'expense' &&
+          tx.category === 'Fixed' &&
+          tx.fixedExpense &&
+          new Date(tx.date).toISOString().slice(0, 7) === transactionMonth
+      )
+      .map((tx) => tx.fixedExpense!)
+      .filter((exp, i, arr) => arr.indexOf(exp) === i);
+  }, [existingTransactions, transactionMonth]);
+
   useEffect(() => {
     if (isSalary && employee && salaryMap[employee]) {
       setAmount(salaryMap[employee].toString());
       setDescription(`Salary for ${employee}`);
+    } else if (isFixedExpense && fixedExpense && fixedExpenseMap[fixedExpense]) {
+      setAmount(fixedExpenseMap[fixedExpense].toString());
+      setDescription(`${fixedExpense}`);
+    } else if (!allowEditAmount) {
+      setAmount('');
+      setDescription('');
     }
-  }, [employee, isSalary]);
+  }, [employee, fixedExpense, isSalary, isFixedExpense, allowEditAmount]);
 
   useEffect(() => {
     if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
       setEmployee('');
     }
-  }, [transactionMonth, isSalary, employee, alreadyPaidEmployees]);
+    if (isFixedExpense && fixedExpense && alreadyPaidFixedExpenses.includes(fixedExpense)) {
+      setFixedExpense('');
+    }
+  }, [transactionMonth, isSalary, employee, alreadyPaidEmployees, isFixedExpense, fixedExpense, alreadyPaidFixedExpenses]);
 
-  const isDuplicateSalary = (): boolean => {
-    return isSalary && !!employee && alreadyPaidEmployees.includes(employee as string);
+  const isDuplicate = (): boolean => {
+    if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
+      return true;
+    }
+    if (isFixedExpense && fixedExpense && alreadyPaidFixedExpenses.includes(fixedExpense)) {
+      return true;
+    }
+    return false;
   };
 
   const handleSubmit = async () => {
@@ -106,9 +117,13 @@ export default function AddTransactionModal({
       return;
     }
 
-    if (isDuplicateSalary()) {
+    if (isDuplicate()) {
       const monthName = new Date(date).toLocaleString('default', { month: 'long', year: 'numeric' });
-      alert(`${employee} already received salary for ${monthName}.`);
+      if (isSalary) {
+        alert(`${employee} already received salary for ${monthName}.`);
+      } else if (isFixedExpense) {
+        alert(`${fixedExpense} already recorded for ${monthName}.`);
+      }
       return;
     }
 
@@ -120,6 +135,7 @@ export default function AddTransactionModal({
       category: customCategory || category,
       description,
       ...(isSalary ? { employee } : {}),
+      ...(isFixedExpense ? { fixedExpense } : {}),
     };
 
     try {
@@ -134,14 +150,11 @@ export default function AddTransactionModal({
       if (res.ok) {
         onAdd(newTransaction);
         onClose();
-
         setAmount('');
         setCategory('');
         setCustomCategory('');
-        // Reset date to appropriate default
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
         if (filterMode === 'month' && selectedMonth === currentMonth) {
           setDate(now.toISOString().slice(0, 10));
         } else if (filterMode === 'month') {
@@ -149,11 +162,11 @@ export default function AddTransactionModal({
         } else {
           setDate(now.toISOString().slice(0, 10));
         }
-        
         setDescription('');
         setType('expense');
         setEmployee('');
-        setAllowEditSalary(false);
+        setFixedExpense('');
+        setAllowEditAmount(false);
       } else {
         alert(`Error: ${data.message || 'Something went wrong'}`);
       }
@@ -182,34 +195,42 @@ export default function AddTransactionModal({
         </button>
       </div>
 
-      <input
-        type="number"
-        placeholder="Amount (PKR)"
-        className="w-full mb-3 border px-3 py-2 rounded"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        disabled={isSalary && !allowEditSalary}
-      />
-
-      {isSalary && (
-        <label className="text-xs text-gray-600 mb-2 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={allowEditSalary}
-            onChange={(e) => setAllowEditSalary(e.target.checked)}
-          />
-          Edit Salary Amount
-        </label>
-      )}
+      <div className="relative mb-3">
+        <input
+          type="number"
+          placeholder="Amount (PKR)"
+          className="w-full border px-3 py-2 rounded pr-10"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          disabled={(isSalary || isFixedExpense) && !allowEditAmount}
+        />
+        {(isSalary || isFixedExpense) && (
+          <button
+            onClick={() => setAllowEditAmount(!allowEditAmount)}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+          >
+            <FaEdit className="h-5 w-5 text-gray-500" />
+          </button>
+        )}
+      </div>
 
       <select
         className="w-full mb-3 border px-3 py-2 rounded"
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        onChange={(e) => {
+          setCategory(e.target.value);
+          setEmployee('');
+          setFixedExpense('');
+          setAmount('');
+          setDescription('');
+          setAllowEditAmount(false);
+        }}
       >
         <option value="">Select Category</option>
         {currentCategories.map((c) => (
-          <option key={c}>{c}</option>
+          <option key={c} value={c}>
+            {c}
+          </option>
         ))}
       </select>
 
@@ -231,6 +252,24 @@ export default function AddTransactionModal({
         </select>
       )}
 
+      {isFixedExpense && (
+        <select
+          className="w-full mb-3 border px-3 py-2 rounded"
+          value={fixedExpense}
+          onChange={(e) => setFixedExpense(e.target.value)}
+        >
+          <option value="">Select Fixed Expense</option>
+          {Object.keys(fixedExpenseMap).map((exp) => {
+            const isPaid = alreadyPaidFixedExpenses.includes(exp);
+            return (
+              <option key={exp} value={exp} disabled={isPaid}>
+                {exp} {isPaid ? '(Paid)' : ''}
+              </option>
+            );
+          })}
+        </select>
+      )}
+
       <input
         type="date"
         className="w-full mb-3 border px-3 py-2 rounded"
@@ -244,7 +283,7 @@ export default function AddTransactionModal({
         className="w-full mb-3 border px-3 py-2 rounded"
         value={customCategory}
         onChange={(e) => setCustomCategory(e.target.value)}
-        disabled={isSalary}
+        disabled={isSalary || isFixedExpense}
       />
 
       <input

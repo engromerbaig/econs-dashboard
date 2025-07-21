@@ -10,4 +10,5 @@ export interface Transaction {
   category: string;
   description?: string;
   employee?: string;
+  fixedExpense?: string;
 }

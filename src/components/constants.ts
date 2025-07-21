@@ -12,7 +12,7 @@ export const incomeCategories = [
   'Misc',
 ];
 
-export const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Prints', 'Misc'];
+export const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Prints', 'Fixed', 'Misc'];
 
 export const salaryMap: Record<string, number> = {
   'Ameer Hamza': 39000,
@@ -25,6 +25,14 @@ export const salaryMap: Record<string, number> = {
   'Usman': 2000,
   'Cleaner': 1500,
   'Jawad': 31500,
-    'Lawyer': 6000,
+  'Lawyer': 6000,
+};
 
+export const fixedExpenseMap: Record<string, number> = {
+  'Rent': 35000,
+  'Electricity Bill': 33000,
+  'Office Maintenance': 5140,
+  'Petty Cash': 7000,
+  'Naila Cash': 50000,
+  'Naila HBL': 20000,
 };
