@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import Modal from './Modal';
 import { incomeCategories, expenseCategories, salaryMap, fixedExpenseMap } from './constants';
 import { Transaction, TransactionType } from './types';
-import { FiEdit } from 'react-icons/fi'; // Using FiEdit from react-icons
 import { FaEdit } from 'react-icons/fa';
 
 interface Props {
@@ -46,6 +45,7 @@ export default function AddTransactionModal({
 
   const isSalary = type === 'expense' && category === 'Salary';
   const isFixedExpense = type === 'expense' && category === 'Fixed';
+  const isPetrol = type === 'expense' && category === 'Petrol';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
   const transactionMonth = useMemo(() => {
@@ -86,11 +86,13 @@ export default function AddTransactionModal({
     } else if (isFixedExpense && fixedExpense && fixedExpenseMap[fixedExpense]) {
       setAmount(fixedExpenseMap[fixedExpense].toString());
       setDescription(`${fixedExpense}`);
+    } else if (isPetrol && employee) {
+      setDescription(`Petrol expense for ${employee}`);
     } else if (!allowEditAmount) {
       setAmount('');
       setDescription('');
     }
-  }, [employee, fixedExpense, isSalary, isFixedExpense, allowEditAmount]);
+  }, [employee, fixedExpense, isSalary, isFixedExpense, isPetrol, allowEditAmount]);
 
   useEffect(() => {
     if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
@@ -134,7 +136,7 @@ export default function AddTransactionModal({
       amount: parseInt(amount),
       category: customCategory || category,
       description,
-      ...(isSalary ? { employee } : {}),
+      ...(isSalary || isPetrol ? { employee } : {}),
       ...(isFixedExpense ? { fixedExpense } : {}),
     };
 
@@ -201,7 +203,7 @@ export default function AddTransactionModal({
           placeholder="Amount (PKR)"
           className="w-full border px-3 py-2 rounded pr-10"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+        onChange={(e) => setAmount(e.target.value)}
           disabled={(isSalary || isFixedExpense) && !allowEditAmount}
         />
         {(isSalary || isFixedExpense) && (
@@ -234,7 +236,7 @@ export default function AddTransactionModal({
         ))}
       </select>
 
-      {isSalary && (
+      {(isSalary || isPetrol) && (
         <select
           className="w-full mb-3 border px-3 py-2 rounded"
           value={employee}
@@ -242,7 +244,7 @@ export default function AddTransactionModal({
         >
           <option value="">Select Employee</option>
           {Object.keys(salaryMap).map((emp) => {
-            const isPaid = alreadyPaidEmployees.includes(emp);
+            const isPaid = isSalary && alreadyPaidEmployees.includes(emp);
             return (
               <option key={emp} value={emp} disabled={isPaid}>
                 {emp} {isPaid ? '(Paid)' : ''}
@@ -283,7 +285,7 @@ export default function AddTransactionModal({
         className="w-full mb-3 border px-3 py-2 rounded"
         value={customCategory}
         onChange={(e) => setCustomCategory(e.target.value)}
-        disabled={isSalary || isFixedExpense}
+        disabled={isSalary || isFixedExpense || isPetrol}
       />
 
       <input
