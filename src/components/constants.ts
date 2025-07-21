@@ -25,4 +25,6 @@ export const salaryMap: Record<string, number> = {
   'Usman': 2000,
   'Cleaner': 1500,
   'Jawad': 31500,
+    'Lawyer': 6000,
+
 };
