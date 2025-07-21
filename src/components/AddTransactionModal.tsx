@@ -1,85 +1,87 @@
 'use client';
 
-import { useEffect, useState, useMemo} from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Modal from './Modal';
-
-type TransactionType = 'income' | 'expense';
+import { incomeCategories, expenseCategories, salaryMap } from './constants';
+import { Transaction, TransactionType } from './types';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (tx: Transaction) => void;
   existingTransactions: Transaction[];
+  selectedMonth: string;
+  filterMode: 'month' | '3m' | '6m' | '1y' | '3y' | 'all';
 }
-
-export interface Transaction {
-  id?: number; // Made optional since MongoDB might not have this
-  _id?: string; // Added for MongoDB ObjectId
-  date: string;
-  amount: number;
-  type: TransactionType;
-  category: string;
-  description?: string;
-  employee?: string;
-}
-
-const incomeCategories = ['OK Builder', 'Tanveer Associates', 'Faizan Heights', 'Bisma Builders', 'McDonalds Pakistan', 'K-Electric', 'Misc'];
-const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Prints', 'Misc'];
-
-const salaryMap: Record<string, number> = {
-  'Ameer Hamza': 39000,
-  'Faraz': 23000,
-  'Ibrahim': 33000,
-  'Tehseen': 20044,
-  'Haris': 23812,
-  'Omer Baig': 25000,
-  'Rafiq': 47700,
-  'Usman': 2000,
-  'Cleaner': 1500,
-  'Jawad': 31500,
-};
 
 export default function AddTransactionModal({
   isOpen,
   onClose,
   onAdd,
   existingTransactions,
+  selectedMonth,
+  filterMode,
 }: Props) {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [employee, setEmployee] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => {
+    // Get current month in YYYY-MM format
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    // If we're in month filter mode and selectedMonth is current month, use today's date
+    // Otherwise, use the 1st day of the selected month
+    if (filterMode === 'month' && selectedMonth === currentMonth) {
+      return now.toISOString().slice(0, 10);
+    } else if (filterMode === 'month') {
+      return `${selectedMonth}-01`;
+    } else {
+      // For other filter modes, default to today
+      return now.toISOString().slice(0, 10);
+    }
+  });
   const [description, setDescription] = useState('');
   const [allowEditSalary, setAllowEditSalary] = useState(false);
+
+  // Update date when selectedMonth or filterMode changes
+  useEffect(() => {
+    if (isOpen) {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (filterMode === 'month' && selectedMonth === currentMonth) {
+        setDate(now.toISOString().slice(0, 10));
+      } else if (filterMode === 'month') {
+        setDate(`${selectedMonth}-01`);
+      } else {
+        setDate(now.toISOString().slice(0, 10));
+      }
+    }
+  }, [selectedMonth, filterMode, isOpen]);
 
   const isSalary = type === 'expense' && category === 'Salary';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
-  // More robust month extraction
-  const selectedMonth = useMemo(() => {
+  const transactionMonth = useMemo(() => {
     const dateObj = new Date(date);
     return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
   }, [date]);
 
-  // Get employees who have already been paid for the selected month
   const alreadyPaidEmployees = useMemo(() => {
     return existingTransactions
-      .filter((tx) => {
-        if (tx.type !== 'expense' || tx.category !== 'Salary' || !tx.employee) {
-          return false;
-        }
-        
-        // Extract month from transaction date
-        const txDate = new Date(tx.date);
-        const txMonth = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        return txMonth === selectedMonth;
-      })
-      .map((tx) => tx.employee)
-      .filter((emp): emp is string => emp !== undefined);
-  }, [existingTransactions, selectedMonth]);
+      .filter(
+        (tx) =>
+          tx.type === 'expense' &&
+          tx.category === 'Salary' &&
+          tx.employee &&
+          new Date(tx.date).toISOString().slice(0, 7) === transactionMonth
+      )
+      .map((tx) => tx.employee!)
+      .filter((emp, i, arr) => arr.indexOf(emp) === i);
+  }, [existingTransactions, transactionMonth]);
 
   useEffect(() => {
     if (isSalary && employee && salaryMap[employee]) {
@@ -88,16 +90,14 @@ export default function AddTransactionModal({
     }
   }, [employee, isSalary]);
 
-  // Reset employee selection when date changes and current employee is already paid
   useEffect(() => {
     if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
       setEmployee('');
     }
-  }, [selectedMonth, isSalary, employee, alreadyPaidEmployees]);
+  }, [transactionMonth, isSalary, employee, alreadyPaidEmployees]);
 
   const isDuplicateSalary = (): boolean => {
-    if (!isSalary || !employee) return false;
-    return alreadyPaidEmployees.includes(employee);
+    return isSalary && !!employee && alreadyPaidEmployees.includes(employee as string);
   };
 
   const handleSubmit = async () => {
@@ -107,8 +107,7 @@ export default function AddTransactionModal({
     }
 
     if (isDuplicateSalary()) {
-      const selectedDate = new Date(date);
-      const monthName = selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const monthName = new Date(date).toLocaleString('default', { month: 'long', year: 'numeric' });
       alert(`${employee} already received salary for ${monthName}.`);
       return;
     }
@@ -124,23 +123,33 @@ export default function AddTransactionModal({
     };
 
     try {
-      const response = await fetch('/api/transactions', {
+      const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTransaction),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
+      if (res.ok) {
         onAdd(newTransaction);
         onClose();
 
-        // Reset form
         setAmount('');
         setCategory('');
         setCustomCategory('');
-        setDate(new Date().toISOString().slice(0, 10));
+        // Reset date to appropriate default
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (filterMode === 'month' && selectedMonth === currentMonth) {
+          setDate(now.toISOString().slice(0, 10));
+        } else if (filterMode === 'month') {
+          setDate(`${selectedMonth}-01`);
+        } else {
+          setDate(now.toISOString().slice(0, 10));
+        }
+        
         setDescription('');
         setType('expense');
         setEmployee('');
@@ -148,8 +157,8 @@ export default function AddTransactionModal({
       } else {
         alert(`Error: ${data.message || 'Something went wrong'}`);
       }
-    } catch (error) {
-      console.error('Submit error:', error);
+    } catch (err) {
+      console.error('Submit error:', err);
       alert('Failed to submit transaction');
     }
   };
@@ -157,6 +166,7 @@ export default function AddTransactionModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <h2 className="text-xl font-bold mb-4">Add Transaction</h2>
+
       <div className="flex gap-4 mb-4">
         <button
           onClick={() => setType('income')}
@@ -213,12 +223,7 @@ export default function AddTransactionModal({
           {Object.keys(salaryMap).map((emp) => {
             const isPaid = alreadyPaidEmployees.includes(emp);
             return (
-              <option
-                key={emp}
-                value={emp}
-                disabled={isPaid}
-                style={{ color: isPaid ? 'gray' : 'inherit' }}
-              >
+              <option key={emp} value={emp} disabled={isPaid}>
                 {emp} {isPaid ? '(Paid)' : ''}
               </option>
             );
@@ -241,7 +246,7 @@ export default function AddTransactionModal({
         onChange={(e) => setCustomCategory(e.target.value)}
         disabled={isSalary}
       />
-      
+
       <input
         type="text"
         placeholder="Description (optional)"
@@ -250,7 +255,10 @@ export default function AddTransactionModal({
         onChange={(e) => setDescription(e.target.value)}
       />
 
-      <button onClick={handleSubmit} className="w-full bg-black cursor-pointer text-white py-2 rounded">
+      <button
+        onClick={handleSubmit}
+        className="w-full bg-black cursor-pointer text-white py-2 rounded"
+      >
         Save
       </button>
     </Modal>

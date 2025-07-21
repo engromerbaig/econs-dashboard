@@ -1,4 +1,4 @@
-import { Transaction } from './AddTransactionModal';
+import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
 import { useState } from 'react';
 import { FaTrashAlt } from 'react-icons/fa';

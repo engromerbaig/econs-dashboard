@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { Transaction } from './AddTransactionModal';
+import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
 
 interface Props {

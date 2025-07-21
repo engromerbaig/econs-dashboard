@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import AddTransactionModal, { Transaction } from '@/components/AddTransactionModal';
+import AddTransactionModal from '@/components/AddTransactionModal';
+import { Transaction } from '@/components/types';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart'; // Import the new component
@@ -160,6 +161,8 @@ export default function DashboardPage() {
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
         existingTransactions={transactions}
+        selectedMonth={selectedMonth}
+        filterMode={filterMode}
       />
     </main>
   );
