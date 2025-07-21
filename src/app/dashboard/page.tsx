@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import AddTransactionModal, { Transaction } from '@/components/AddTransactionModal';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
+import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart'; // Import the new component
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 
 export default function DashboardPage() {
@@ -63,88 +64,89 @@ export default function DashboardPage() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <main className="min-h-screen  bg-white">
-{/* Top Navbar */}
-<div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
-  <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
-  <button
-    onClick={() => {
-      // Placeholder logout logic — replace with actual auth method
-      window.location.href = '/'; // or use your router to redirect
-    }}
-    className="bg-red-500 cursor-pointer text-white px-4 py-1 rounded hover:bg-red-600 transition"
-  >
-    Logout
-  </button>
-</div>
-
-<div className="p-6">
-
-
-     {/* Summary Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 bg-green-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Income</h2>
-          <p className="text-lg font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
-        </div>
-        <div className="p-4 bg-red-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Expense</h2>
-          <p className="text-lg font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
-        </div>
-        <div className="p-4 bg-blue-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Company Profit</h2>
-          <p className="text-lg font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
-        </div>
-        <div className="p-4 bg-indigo-100 rounded shadow">
-          <h2 className="text-sm font-semibold">Salary Total</h2>
-          <p className="text-lg font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
-        </div>
-      </div>
-
-      {/* Filters and Actions */}
-      <div className="mb-6 flex  flex-wrap items-center gap-4">
-        <div className="flex gap-2  text-sm">
-          {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
-            <button
-              key={mode}
-              className={`px-3 py-1 cursor-pointer  rounded border ${
-                filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
-              }`}
-              onClick={() => setFilterMode(mode as any)}
-            >
-              {mode === 'month' ? 'Month' : mode.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
-        {filterMode === 'month' && (
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="border px-3 py-1 rounded"
-          />
-        )}
-
+    <main className="min-h-screen bg-white">
+      {/* Top Navbar */}
+      <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
+        <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
         <button
-          onClick={() => setModalOpen(true)}
-          className="bg-black text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-800 transition"
+          onClick={() => {
+            window.location.href = '/';
+          }}
+          className="bg-red-500 cursor-pointer text-white px-4 py-1 rounded hover:bg-red-600 transition"
         >
-          + Add Transaction
-        </button>
-
-        <button
-          onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
-          className="bg-gray-200 text-black px-4 py-2 cursor-pointer rounded border border-gray-300 hover:bg-gray-300"
-        >
-          ⬇️ Export CSV
+          Logout
         </button>
       </div>
 
-      {/* Transactions & Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <TransactionList transactions={filtered} />
-        <TransactionSummary transactions={filtered} />
+      <div className="p-6">
+        {/* Summary Boxes */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          <div className="p-4 bg-green-100 rounded shadow">
+            <h2 className="text-sm font-semibold">Income</h2>
+            <p className="text-lg font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="p-4 bg-red-100 rounded shadow">
+            <h2 className="text-sm font-semibold">Expense</h2>
+            <p className="text-lg font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="p-4 bg-blue-100 rounded shadow">
+            <h2 className="text-sm font-semibold">Company Profit</h2>
+            <p className="text-lg font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
+          </div>
+          <div className="p-4 bg-indigo-100 rounded shadow">
+            <h2 className="text-sm font-semibold">Salary Total</h2>
+            <p className="text-lg font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+
+        {/* Filters and Actions */}
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <div className="flex gap-2 text-sm">
+            {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
+              <button
+                key={mode}
+                className={`px-3 py-1 cursor-pointer rounded border ${
+                  filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
+                }`}
+                onClick={() => setFilterMode(mode as any)}
+              >
+                {mode === 'month' ? 'Month' : mode.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {filterMode === 'month' && (
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border px-3 py-1 rounded"
+            />
+          )}
+
+          <button
+            onClick={() => setModalOpen(true)}
+            className="bg-black text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-800 transition"
+          >
+            + Add Transaction
+          </button>
+
+          <button
+            onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
+            className="bg-gray-200 text-black px-4 py-2 cursor-pointer rounded border border-gray-300 hover:bg-gray-300"
+          >
+            ⬇️ Export CSV
+          </button>
+        </div>
+
+        {/* Transactions, Summary, and Chart */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <TransactionList transactions={filtered} />
+          <TransactionSummary transactions={filtered} />
+        </div>
+
+        {/* Monthly Net Profit Chart */}
+        <MonthlyNetProfitChart transactions={filtered} />
       </div>
 
       {/* Modal */}
@@ -152,12 +154,8 @@ export default function DashboardPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
-          existingTransactions={transactions}
-
+        existingTransactions={transactions}
       />
-
-</div>
-   
     </main>
   );
 }
