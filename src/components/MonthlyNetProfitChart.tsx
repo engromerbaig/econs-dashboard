@@ -1,6 +1,14 @@
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 import { Transaction } from '@/components/AddTransactionModal';
 
 interface MonthlyNetProfitChartProps {
@@ -13,7 +21,6 @@ interface MonthlyData {
 }
 
 const MonthlyNetProfitChart = ({ transactions }: MonthlyNetProfitChartProps) => {
-  // Process transactions to calculate monthly net profit
   const getMonthlyData = (): MonthlyData[] => {
     const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
 
@@ -32,13 +39,23 @@ const MonthlyNetProfitChart = ({ transactions }: MonthlyNetProfitChartProps) => 
       }
     });
 
-    // Convert to array and sort by month
     const monthlyData: MonthlyData[] = Object.keys(monthlyMap)
-      .map((month) => ({
-        month,
-        netProfit: monthlyMap[month].income - monthlyMap[month].expense,
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month)); // Sort chronologically
+      .map((monthKey) => {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1);
+        const formattedMonth = date.toLocaleString('en-US', {
+          month: 'short',
+          year: '2-digit',
+        }); // e.g., "Jul 25"
+
+        return {
+          month: formattedMonth,
+          netProfit: monthlyMap[monthKey].income - monthlyMap[monthKey].expense,
+          sortDate: date.getTime(),
+        };
+      })
+      .sort((a, b) => a.sortDate - b.sortDate)
+      .map(({ month, netProfit }) => ({ month, netProfit }));
 
     return monthlyData;
   };
@@ -48,9 +65,8 @@ const MonthlyNetProfitChart = ({ transactions }: MonthlyNetProfitChartProps) => 
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-semibold mb-4">Monthly Net Profit Growth</h2>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="month" />
           <YAxis />
           <Tooltip formatter={(value: number) => `PKR ${value.toLocaleString('en-IN')}`} />
@@ -58,7 +74,8 @@ const MonthlyNetProfitChart = ({ transactions }: MonthlyNetProfitChartProps) => 
           <Line
             type="monotone"
             dataKey="netProfit"
-            stroke="#2563eb" // Blue color for the line
+            stroke="#2563eb"
+            strokeWidth={3} // Bolder line
             activeDot={{ r: 8 }}
             name="Net Profit"
           />
