@@ -80,22 +80,22 @@ export default function DashboardPage() {
 
       <div className="p-6">
         {/* Summary Boxes */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-          <div className="p-4 bg-green-100 rounded shadow">
-            <h2 className="text-sm font-semibold">Income</h2>
-            <p className="text-lg font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 mb-6">
+          <div className="p-10 items-center bg-green-100 rounded shadow">
+            <h2 className="text-base font-semibold">Income</h2>
+            <p className="text-2xl font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-4 bg-red-100 rounded shadow">
-            <h2 className="text-sm font-semibold">Expense</h2>
-            <p className="text-lg font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
+          <div className="p-10   items-center bg-red-100 rounded shadow">
+            <h2 className="text-base font-semibold">Expense</h2>
+            <p className="text-2xl font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-4 bg-blue-100 rounded shadow">
-            <h2 className="text-sm font-semibold">Company Profit</h2>
-            <p className="text-lg font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
+          <div className="p-10  items-center bg-blue-100 rounded shadow">
+            <h2 className="text-base font-semibold">Company Profit</h2>
+            <p className="text-2xl font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-4 bg-indigo-100 rounded shadow">
-            <h2 className="text-sm font-semibold">Salary Total</h2>
-            <p className="text-lg font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
+          <div className="p-10 items-center bg-indigo-100 rounded shadow">
+            <h2 className="text-base font-semibold">Salary Total</h2>
+            <p className="text-2xl font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
           </div>
         </div>
 
