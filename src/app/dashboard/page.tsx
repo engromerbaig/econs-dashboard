@@ -38,6 +38,11 @@ export default function DashboardPage() {
     setTransactions([tx, ...transactions]);
   };
 
+  // New delete handler
+  const handleDelete = (transactionId: string) => {
+    setTransactions(transactions.filter(tx => String(tx.id) !== String(transactionId)));
+  };
+
   const getDateXMonthsAgo = (months: number): string => {
     const d = new Date();
     d.setMonth(d.getMonth() - months);
@@ -141,7 +146,7 @@ export default function DashboardPage() {
 
         {/* Transactions, Summary, and Chart */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <TransactionList transactions={filtered} />
+          <TransactionList transactions={filtered} onDelete={handleDelete} />
           <TransactionSummary transactions={filtered} />
         </div>
 
