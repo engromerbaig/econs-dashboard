@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { Transaction } from '@/components/AddTransactionModal';
+import { Transaction } from "@/components/types";
 
 interface MonthlyNetProfitChartProps {
   transactions: Transaction[];

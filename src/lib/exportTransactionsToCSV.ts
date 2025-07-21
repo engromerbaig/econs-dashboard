@@ -1,4 +1,4 @@
-import { Transaction } from '@/components/AddTransactionModal';
+import { Transaction } from "@/components/types";
 
 export function exportTransactionsToCSV(transactions: Transaction[], month: string) {
   const filtered = transactions.filter(tx => tx.date.startsWith(month));
