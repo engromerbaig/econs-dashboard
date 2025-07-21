@@ -56,17 +56,29 @@ export default function AddTransactionModal({
   const isSalary = type === 'expense' && category === 'Salary';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
-  const selectedMonth = new Date(date).toISOString().slice(0, 7);
+  // More robust month extraction
+  const selectedMonth = useMemo(() => {
+    const dateObj = new Date(date);
+    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+  }, [date]);
 
-  
-  const alreadyPaidEmployees = existingTransactions
-    .filter(
-      (tx) =>
-        tx.type === 'expense' &&
-        tx.category === 'Salary' &&
-        tx.date.slice(0, 7) === selectedMonth
-    )
-    .map((tx) => tx.employee);
+  // Get employees who have already been paid for the selected month
+  const alreadyPaidEmployees = useMemo(() => {
+    return existingTransactions
+      .filter((tx) => {
+        if (tx.type !== 'expense' || tx.category !== 'Salary' || !tx.employee) {
+          return false;
+        }
+        
+        // Extract month from transaction date
+        const txDate = new Date(tx.date);
+        const txMonth = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        return txMonth === selectedMonth;
+      })
+      .map((tx) => tx.employee)
+      .filter((emp): emp is string => emp !== undefined);
+  }, [existingTransactions, selectedMonth]);
 
   useEffect(() => {
     if (isSalary && employee && salaryMap[employee]) {
@@ -74,6 +86,13 @@ export default function AddTransactionModal({
       setDescription(`Salary for ${employee}`);
     }
   }, [employee, isSalary]);
+
+  // Reset employee selection when date changes and current employee is already paid
+  useEffect(() => {
+    if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
+      setEmployee('');
+    }
+  }, [selectedMonth, isSalary, employee, alreadyPaidEmployees]);
 
   const isDuplicateSalary = (): boolean => {
     if (!isSalary || !employee) return false;
@@ -87,7 +106,9 @@ export default function AddTransactionModal({
     }
 
     if (isDuplicateSalary()) {
-      alert(`${employee} already received salary for this month.`);
+      const selectedDate = new Date(date);
+      const monthName = selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+      alert(`${employee} already received salary for ${monthName}.`);
       return;
     }
 
@@ -205,6 +226,13 @@ export default function AddTransactionModal({
       )}
 
       <input
+        type="date"
+        className="w-full mb-3 border px-3 py-2 rounded"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+      />
+
+      <input
         type="text"
         placeholder="Or add new category"
         className="w-full mb-3 border px-3 py-2 rounded"
@@ -212,12 +240,7 @@ export default function AddTransactionModal({
         onChange={(e) => setCustomCategory(e.target.value)}
         disabled={isSalary}
       />
-      <input
-        type="date"
-        className="w-full mb-3 border px-3 py-2 rounded"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
+      
       <input
         type="text"
         placeholder="Description (optional)"
@@ -226,7 +249,7 @@ export default function AddTransactionModal({
         onChange={(e) => setDescription(e.target.value)}
       />
 
-      <button onClick={handleSubmit} className="w-full bg-black text-white py-2 rounded">
+      <button onClick={handleSubmit} className="w-full bg-black cursor-pointer text-white py-2 rounded">
         Save
       </button>
     </Modal>
