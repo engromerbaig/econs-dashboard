@@ -13,7 +13,8 @@ interface Props {
 }
 
 export interface Transaction {
-  id: number;
+  id?: number; // Made optional since MongoDB might not have this
+  _id?: string; // Added for MongoDB ObjectId
   date: string;
   amount: number;
   type: TransactionType;
@@ -22,7 +23,7 @@ export interface Transaction {
   employee?: string;
 }
 
-const incomeCategories = ['OK Builder', 'Tanveer Associate', 'Khaybaani Builders'];
+const incomeCategories = ['OK Builder', 'Tanveer Associates', 'Faizan Heights', 'Bisma Builders', 'McDonalds Pakistan', 'K-Electric', 'Misc'];
 const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Prints', 'Misc'];
 
 const salaryMap: Record<string, number> = {
