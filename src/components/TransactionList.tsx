@@ -5,7 +5,7 @@ import { FaTrashAlt } from 'react-icons/fa';
 
 interface Props {
   transactions: Transaction[];
-  onDelete: (transactionId: string) => void; // Expects string ID
+  onDelete: (transactionId: string) => void;
 }
 
 export default function TransactionList({ transactions, onDelete }: Props) {
@@ -123,7 +123,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
         {['all', 'income', 'expense'].map((type) => (
           <button
             key={type}
-            className={`px-3 py-1 rounded cursor-pointer  ${
+            className={`px-3 py-1 rounded cursor-pointer ${
               activeType === type ? 'bg-black text-white' : 'bg-gray-200 text-black'
             }`}
             onClick={() => setActiveType(type as any)}
@@ -133,7 +133,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
         ))}
       </div>
 
-      {/* Sort */}
+      {/* Sort & Bulk Controls */}
       <div className="mb-3 flex items-center gap-4">
         <select
           className="border px-2 py-1 rounded text-sm"
@@ -169,72 +169,74 @@ export default function TransactionList({ transactions, onDelete }: Props) {
         )}
       </div>
 
-      {/* List */}
+      {/* Scrollable List */}
       {sorted.length === 0 ? (
         <p className="text-gray-500">No matching transactions.</p>
       ) : (
-        <ul className="space-y-2 text-sm">
-          {sorted.map((tx, index) => {
-            let transactionId: string;
-            try {
-              transactionId = getTransactionId(tx);
-            } catch (error) {
-              console.error('Transaction missing ID:', tx);
-              return null;
-            }
+        <div className="max-h-[500px] overflow-y-auto pr-1">
+          <ul className="space-y-2 text-sm">
+            {sorted.map((tx, index) => {
+              let transactionId: string;
+              try {
+                transactionId = getTransactionId(tx);
+              } catch (error) {
+                console.error('Transaction missing ID:', tx);
+                return null;
+              }
 
-            const isIncome = tx.type === 'income';
-            const color = isIncome ? 'text-green-600' : 'text-red-600';
-            const sign = isIncome ? '+' : '−';
-            const isDeleting = deletingId === transactionId;
+              const isIncome = tx.type === 'income';
+              const color = isIncome ? 'text-green-600' : 'text-red-600';
+              const sign = isIncome ? '+' : '−';
+              const isDeleting = deletingId === transactionId;
 
-            return (
-              <li key={transactionId} className="border-b-2 pb-2">
-                <div className="flex justify-between items-center font-semibold">
-                  <div className="flex items-center gap-2">
-                    {bulkMode && (
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(transactionId)}
-                        onChange={() => toggleSelect(transactionId)}
-                        className="accent-black"
-                      />
-                    )}
-                    <span>
-                      #{index + 1} • {tx.category}
-                    </span>
+              return (
+                <li key={transactionId} className="border-b-2 pb-2">
+                  <div className="flex justify-between items-center font-semibold">
+                    <div className="flex items-center gap-2">
+                      {bulkMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(transactionId)}
+                          onChange={() => toggleSelect(transactionId)}
+                          className="accent-black"
+                        />
+                      )}
+                      <span>
+                        #{index + 1} • {tx.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={color}>
+                        {sign} {formatPKR(tx.amount)}
+                      </span>
+                      {!bulkMode && (
+                        <button
+                          onClick={() => handleDelete(tx)}
+                          disabled={isDeleting}
+                          className={`p-1 rounded hover:bg-red-100 transition-colors ${
+                            isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                          }`}
+                          title="Delete transaction"
+                        >
+                          <FaTrashAlt className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`${color}`}>
-                      {sign} {formatPKR(tx.amount)}
-                    </span>
-                    {!bulkMode && (
-                      <button
-                        onClick={() => handleDelete(tx)}
-                        disabled={isDeleting}
-                        className={`p-1 rounded hover:bg-red-100 transition-colors ${
-                          isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
-                        }`}
-                        title="Delete transaction"
-                      >
-                        <FaTrashAlt className="w-4 h-4" />
-                      </button>
-                    )}
+                  <div className="text-gray-600">
+                    {tx.type} • {tx.date}
                   </div>
-                </div>
-                <div className="text-gray-600">
-                  {tx.type} • {tx.date}
-                </div>
-                {tx.description && (
-                  <div className="text-gray-500 italic">{tx.description}</div>
-                )}
-                {isDeleting && (
-                  <div className="text-xs text-blue-600 mt-1">Deleting...</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {tx.description && (
+                    <div className="text-gray-500 italic">{tx.description}</div>
+                  )}
+                  {isDeleting && (
+                    <div className="text-xs text-blue-600 mt-1">Deleting...</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -86,7 +86,7 @@ const handleDelete = (transactionId: string) => {
           onClick={() => {
             window.location.href = '/';
           }}
-          className="bg-red-500 cursor-pointer text-white px-4 py-1 rounded hover:bg-red-600 transition"
+          className="bg-black cursor-pointer text-white px-4 py-1 rounded hover:bg-black/80 transition"
         >
           Logout
         </button>

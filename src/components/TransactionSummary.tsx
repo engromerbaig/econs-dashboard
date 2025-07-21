@@ -26,13 +26,13 @@ export default function TransactionSummary({ transactions }: Props) {
     <div className="w-full border-2 border-gray-200 rounded-lg p-6 bg-white shadow-md">
       <h2 className="text-lg font-bold mb-4">Summary</h2>
 
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
-            outerRadius={120}
+            outerRadius={150}
           >
             {chartData.map((_, i) => (
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
