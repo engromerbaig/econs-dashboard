@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Modal from './Modal';
 import { incomeCategories, expenseCategories, salaryMap, fixedExpenseMap } from './constants';
 import { Transaction, TransactionType } from './types';
-import { FaEdit } from 'react-icons/fa';
+import { FaEdit, FaTimes } from 'react-icons/fa';
 
 interface Props {
   isOpen: boolean;
@@ -160,6 +160,10 @@ export default function AddTransactionModal({
     );
   };
 
+  const handleClearBatch = () => {
+    setBatchTransactions([]);
+  };
+
   const handleSubmit = async () => {
     if (!batchTransactions.length) {
       // Single transaction submission
@@ -270,25 +274,34 @@ export default function AddTransactionModal({
         </button>
       </div>
 
-      <div className="flex gap-4 mb-4">
-        <button
-          onClick={handleAddAllSalaries}
-          className="px-4 py-2 rounded bg-blue-200"
-          disabled={alreadyPaidEmployees.length === Object.keys(salaryMap).length}
-        >
-          Add All Salaries
-        </button>
-        <button
-          onClick={handleAddAllFixedExpenses}
-          className="px-4 py-2 rounded bg-blue-200"
-          disabled={alreadyPaidFixedExpenses.length === Object.keys(fixedExpenseMap).length}
-        >
-          Add All Fixed Expenses
-        </button>
-      </div>
+      {type === 'expense' && (
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={handleAddAllSalaries}
+            className="px-4 py-2 rounded bg-blue-200 disabled:opacity-50"
+            disabled={alreadyPaidEmployees.length === Object.keys(salaryMap).length}
+          >
+            Add All Salaries
+          </button>
+          <button
+            onClick={handleAddAllFixedExpenses}
+            className="px-4 py-2 rounded bg-blue-200 disabled:opacity-50"
+            disabled={alreadyPaidFixedExpenses.length === Object.keys(fixedExpenseMap).length}
+          >
+            Add All Fixed Expenses
+          </button>
+        </div>
+      )}
 
       {batchTransactions.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-4 max-h-64 overflow-y-auto relative">
+          <button
+            onClick={handleClearBatch}
+            className="absolute top-0 right-0 p-2 text-gray-500 hover:text-gray-700"
+            title="Close Batch Mode"
+          >
+            <FaTimes className="h-5 w-5" />
+          </button>
           <h3 className="text-lg font-semibold mb-2">Batch Transactions</h3>
           <table className="w-full border-collapse">
             <thead>
