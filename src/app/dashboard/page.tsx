@@ -63,10 +63,25 @@ export default function DashboardPage() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <main className="min-h-screen p-6 bg-white">
-      <h1 className="text-2xl font-bold mb-4">Econs Dashboard</h1>
+    <main className="min-h-screen  bg-white">
+{/* Top Navbar */}
+<div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
+  <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
+  <button
+    onClick={() => {
+      // Placeholder logout logic — replace with actual auth method
+      window.location.href = '/'; // or use your router to redirect
+    }}
+    className="bg-red-500 cursor-pointer text-white px-4 py-1 rounded hover:bg-red-600 transition"
+  >
+    Logout
+  </button>
+</div>
 
-      {/* Summary Boxes */}
+<div className="p-6">
+
+
+     {/* Summary Boxes */}
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <div className="p-4 bg-green-100 rounded shadow">
           <h2 className="text-sm font-semibold">Income</h2>
@@ -140,6 +155,9 @@ export default function DashboardPage() {
           existingTransactions={transactions}
 
       />
+
+</div>
+   
     </main>
   );
 }
