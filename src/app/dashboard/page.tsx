@@ -39,10 +39,18 @@ export default function DashboardPage() {
     setTransactions([tx, ...transactions]);
   };
 
-  // New delete handler
-  const handleDelete = (transactionId: string) => {
-    setTransactions(transactions.filter(tx => String(tx.id) !== String(transactionId)));
-  };
+  // New delete handler// Updated handleDelete function for the Dashboard component
+// Replace the existing handleDelete function with this:
+
+const handleDelete = (transactionId: string) => {
+  setTransactions(prevTransactions => 
+    prevTransactions.filter(tx => {
+      // Check both _id and id fields to ensure proper filtering
+      const txId = tx._id ? tx._id.toString() : tx.id?.toString();
+      return txId !== transactionId;
+    })
+  );
+};
 
   const getDateXMonthsAgo = (months: number): string => {
     const d = new Date();

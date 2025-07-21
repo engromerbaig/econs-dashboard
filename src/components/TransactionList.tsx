@@ -5,7 +5,7 @@ import { FaTrashAlt } from 'react-icons/fa';
 
 interface Props {
   transactions: Transaction[];
-  onDelete: (transactionId: string) => void; // New prop for delete callback
+  onDelete: (transactionId: string) => void; // Expects string ID
 }
 
 export default function TransactionList({ transactions, onDelete }: Props) {
@@ -27,27 +27,39 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     return 0;
   });
 
-  const handleDelete = async (transactionId: string | number) => {
+  // Helper function to get consistent ID string
+  const getTransactionId = (transaction: Transaction): string => {
+    // Prioritize _id (MongoDB ObjectId) over id (temporary local ID)
+    if (transaction._id) {
+      return transaction._id.toString();
+    }
+    if (transaction.id) {
+      return transaction.id.toString();
+    }
+    throw new Error('Transaction has no valid ID');
+  };
+
+  const handleDelete = async (transaction: Transaction) => {
     const confirmed = window.confirm('Are you sure you want to delete this transaction? This action cannot be undone.');
     
     if (!confirmed) return;
 
-    // Convert ID to string for consistent handling
-    const idString = transactionId.toString();
-    setDeletingId(idString);
-
     try {
-      const response = await fetch(`/api/transactions/${idString}`, {
+      const transactionId = getTransactionId(transaction);
+      setDeletingId(transactionId);
+
+      const response = await fetch(`/api/transactions/${transactionId}`, {
         method: 'DELETE',
       });
 
       const data = await response.json();
 
       if (data.status === 'success') {
-        // Call the parent component's delete handler to update the state
-        onDelete(idString);
+        // Call the parent component's delete handler with the same ID format
+        onDelete(transactionId);
       } else {
         alert('Failed to delete transaction: ' + data.message);
+        console.error('Delete failed:', data.message);
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -99,10 +111,19 @@ export default function TransactionList({ transactions, onDelete }: Props) {
             const isIncome = tx.type === 'income';
             const color = isIncome ? 'text-green-600' : 'text-red-600';
             const sign = isIncome ? '+' : '−';
-            const isDeleting = deletingId === (tx._id?.toString() || tx.id?.toString());
+            
+            let transactionId: string;
+            try {
+              transactionId = getTransactionId(tx);
+            } catch (error) {
+              console.error('Transaction missing ID:', tx);
+              return null; // Skip transactions without valid IDs
+            }
+
+            const isDeleting = deletingId === transactionId;
 
             return (
-              <li key={tx._id?.toString() || tx.id?.toString()} className="border-b-2 pb-2">
+              <li key={transactionId} className="border-b-2 pb-2">
                 <div className="flex justify-between items-center font-semibold">
                   <div className="flex-1">
                     #{index + 1} • {tx.category}
@@ -112,10 +133,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                       {sign} {formatPKR(tx.amount)}
                     </span>
                     <button
-                      onClick={() => {
-                        const id = tx._id ?? tx.id;
-                        if (id !== undefined) handleDelete(id);
-                      }}
+                      onClick={() => handleDelete(tx)}
                       disabled={isDeleting}
                       className={`p-1 rounded hover:bg-red-100 transition-colors ${
                         isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
