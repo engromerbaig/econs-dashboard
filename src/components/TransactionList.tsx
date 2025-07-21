@@ -13,6 +13,10 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+
   const filtered = transactions.filter(tx => {
     if (activeType === 'all') return true;
     if (activeType === 'personal') return tx.category.toLowerCase().includes('personal');
@@ -27,21 +31,49 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     return 0;
   });
 
-  // Helper function to get consistent ID string
   const getTransactionId = (transaction: Transaction): string => {
-    // Prioritize _id (MongoDB ObjectId) over id (temporary local ID)
-    if (transaction._id) {
-      return transaction._id.toString();
-    }
-    if (transaction.id) {
-      return transaction.id.toString();
-    }
+    if (transaction._id) return transaction._id.toString();
+    if (transaction.id) return transaction.id.toString();
     throw new Error('Transaction has no valid ID');
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(sorted.map(getTransactionId));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedIds.length} selected transactions?`
+    );
+    if (!confirmed) return;
+
+    for (const id of selectedIds) {
+      try {
+        await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+        onDelete(id);
+      } catch (err) {
+        console.error('Failed to delete transaction ID:', id, err);
+      }
+    }
+
+    setSelectedIds([]);
+    setSelectAll(false);
+    setBulkMode(false);
   };
 
   const handleDelete = async (transaction: Transaction) => {
     const confirmed = window.confirm('Are you sure you want to delete this transaction? This action cannot be undone.');
-    
     if (!confirmed) return;
 
     try {
@@ -55,7 +87,6 @@ export default function TransactionList({ transactions, onDelete }: Props) {
       const data = await response.json();
 
       if (data.status === 'success') {
-        // Call the parent component's delete handler with the same ID format
         onDelete(transactionId);
       } else {
         alert('Failed to delete transaction: ' + data.message);
@@ -71,7 +102,21 @@ export default function TransactionList({ transactions, onDelete }: Props) {
 
   return (
     <div>
-      <h2 className="text-lg font-bold mb-3">Transactions</h2>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-lg font-bold">Transactions</h2>
+        <button
+          onClick={() => {
+            setBulkMode(!bulkMode);
+            setSelectedIds([]);
+            setSelectAll(false);
+          }}
+          className={`text-sm px-3 py-1 rounded border ${
+            bulkMode ? 'bg-red-100 text-red-600' : 'bg-gray-200'
+          }`}
+        >
+          {bulkMode ? 'Cancel Bulk Delete' : 'Bulk Delete'}
+        </button>
+      </div>
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-3 text-sm font-medium">
@@ -89,7 +134,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
       </div>
 
       {/* Sort */}
-      <div className="mb-3">
+      <div className="mb-3 flex items-center gap-4">
         <select
           className="border px-2 py-1 rounded text-sm"
           value={sort}
@@ -100,6 +145,28 @@ export default function TransactionList({ transactions, onDelete }: Props) {
           <option value="highest">Sort by Highest Amount</option>
           <option value="lowest">Sort by Lowest Amount</option>
         </select>
+
+        {bulkMode && sorted.length > 0 && (
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={toggleSelectAll}
+                className="accent-black"
+              />
+              Select All
+            </label>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="bg-red-500 text-white text-sm px-3 py-1 rounded hover:bg-red-600 transition"
+              >
+                🗑️ Delete Selected ({selectedIds.length})
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* List */}
@@ -108,40 +175,51 @@ export default function TransactionList({ transactions, onDelete }: Props) {
       ) : (
         <ul className="space-y-2 text-sm">
           {sorted.map((tx, index) => {
-            const isIncome = tx.type === 'income';
-            const color = isIncome ? 'text-green-600' : 'text-red-600';
-            const sign = isIncome ? '+' : '−';
-            
             let transactionId: string;
             try {
               transactionId = getTransactionId(tx);
             } catch (error) {
               console.error('Transaction missing ID:', tx);
-              return null; // Skip transactions without valid IDs
+              return null;
             }
 
+            const isIncome = tx.type === 'income';
+            const color = isIncome ? 'text-green-600' : 'text-red-600';
+            const sign = isIncome ? '+' : '−';
             const isDeleting = deletingId === transactionId;
 
             return (
               <li key={transactionId} className="border-b-2 pb-2">
                 <div className="flex justify-between items-center font-semibold">
-                  <div className="flex-1">
-                    #{index + 1} • {tx.category}
+                  <div className="flex items-center gap-2">
+                    {bulkMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(transactionId)}
+                        onChange={() => toggleSelect(transactionId)}
+                        className="accent-black"
+                      />
+                    )}
+                    <span>
+                      #{index + 1} • {tx.category}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`${color}`}>
                       {sign} {formatPKR(tx.amount)}
                     </span>
-                    <button
-                      onClick={() => handleDelete(tx)}
-                      disabled={isDeleting}
-                      className={`p-1 rounded hover:bg-red-100 transition-colors ${
-                        isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
-                      }`}
-                      title="Delete transaction"
-                    >
-                      <FaTrashAlt className="w-4 h-4" />
-                    </button>
+                    {!bulkMode && (
+                      <button
+                        onClick={() => handleDelete(tx)}
+                        disabled={isDeleting}
+                        className={`p-1 rounded hover:bg-red-100 transition-colors ${
+                          isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                        }`}
+                        title="Delete transaction"
+                      >
+                        <FaTrashAlt className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="text-gray-600">
