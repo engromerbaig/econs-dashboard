@@ -22,6 +22,21 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    // Store the original overflow style
+    const originalOverflow = document.body.style.overflow;
+
+    if (isOpen) {
+      // Disable scrolling when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Restore original overflow style when modal closes or component unmounts
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === backdropRef.current) {
       onClose();
