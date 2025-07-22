@@ -8,8 +8,14 @@ import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+import { useRouter } from 'next/navigation'; // ✅ Add this
+
 
 export default function DashboardPage() {
+  const router = useRouter(); // ✅ Add this near useState calls
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<'month' | '3m' | '6m' | '1y' | '3y' | 'all'>('month');
@@ -52,6 +58,12 @@ export default function DashboardPage() {
       })
     );
   };
+
+
+  const handleLogout = () => {
+  localStorage.removeItem('userSession'); // Clear session
+  router.push('/'); // Redirect to login
+};
 
   const getDateXMonthsAgo = (months: number): string => {
     const d = new Date();
@@ -113,12 +125,13 @@ export default function DashboardPage() {
   const isIncrease = percentageChange >= 0 && prevMonthProfit !== 0;
 
   return (
-    <main className="min-h-screen bg-white">
+    <ProtectedRoute>
+  <main className="min-h-screen bg-white">
       {/* Top Navbar */}
       <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
         <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
         <button
-          onClick={() => (window.location.href = '/')}
+          onClick={handleLogout}
           className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
         >
           Logout
@@ -229,5 +242,9 @@ export default function DashboardPage() {
         filterMode={filterMode}
       />
     </main>
+
+
+    </ProtectedRoute>
+  
   );
 }
