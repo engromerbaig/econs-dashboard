@@ -60,9 +60,9 @@ export default function DashboardPage() {
   };
 
 
-  const handleLogout = () => {
-  localStorage.removeItem('userSession'); // Clear session
-  router.push('/'); // Redirect to login
+const handleLogout = async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  router.push('/');
 };
 
   const getDateXMonthsAgo = (months: number): string => {
@@ -125,7 +125,6 @@ export default function DashboardPage() {
   const isIncrease = percentageChange >= 0 && prevMonthProfit !== 0;
 
   return (
-    <ProtectedRoute>
   <main className="min-h-screen bg-white">
       {/* Top Navbar */}
       <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
@@ -244,7 +243,6 @@ export default function DashboardPage() {
     </main>
 
 
-    </ProtectedRoute>
   
   );
 }
