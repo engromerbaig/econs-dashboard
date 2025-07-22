@@ -304,13 +304,13 @@ export default function AddTransactionModal({
       <div className="flex gap-4 mb-4">
         <button
           onClick={() => setType('income')}
-          className={`px-4 py-2 rounded ${type === 'income' ? 'bg-green-200' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded-full cursor-pointer ${type === 'income' ? 'bg-green-200' : 'bg-gray-200'}`}
         >
           Income
         </button>
         <button
           onClick={() => setType('expense')}
-          className={`px-4 py-2 rounded ${type === 'expense' ? 'bg-red-200' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded-full cursor-pointer ${type === 'expense' ? 'bg-red-200' : 'bg-gray-200'}`}
         >
           Expense
         </button>
@@ -342,7 +342,7 @@ export default function AddTransactionModal({
             className="absolute top-0 right-0 p-2 text-gray-500 hover:text-gray-700"
             title="Close Batch Mode"
           >
-            <FaTimes className="h-5 w-5" />
+            <FaTimes className="h-5 w-5 text-red-500" />
           </button>
           <h3 className="text-lg font-semibold mb-2">Batch Transactions</h3>
           <table className="w-full border-collapse">
