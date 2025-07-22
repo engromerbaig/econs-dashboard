@@ -24,7 +24,6 @@ export const salaryMap: Record<string, number> = {
   'Rafiq': 47700,
   'Usman': 2000,
   'Cleaner': 1500,
-  'Jawad': 31500,
   'Lawyer': 6000,
 };
 
@@ -36,6 +35,5 @@ export const fixedExpenseMap: Record<string, number> = {
 
   'Office Maintenance': 5140,
   'Petty Cash': 7000,
-  'Naila Cash': 50000,
-  'Naila HBL': 20000,
+ 
 };
