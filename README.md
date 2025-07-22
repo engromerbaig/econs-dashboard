@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Econs Dashboard 🧾
 
-## Getting Started
+The **Econs Dashboard** is a modern expense and income management system designed for internal use by **Econs (Electrical Consultants)**. Built with **Next.js**, **TypeScript**, and **Tailwind CSS**, the platform currently focuses on financial tracking and will soon evolve into a **full-fledged CRM**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🔧 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 💰 **Transaction Management**  
+  Track **income** and **expenses** with categories like:
+  - Income Sources
+  - Utilities
+  - Salaries
+  - Petrol
+  - Prints
+  - Miscellaneous
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 📊 **Summary Dashboard**  
+  Includes visual charts and summaries powered by **Recharts**, showing:
+  - Total Income / Expenses
+  - Monthly Net Profit
+  - Personal Expenses
+  - Profit Trends (Bar + Pie Charts)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 🧠 **Smart Filters**  
+  Filter transactions **month-wise** for clear visibility and decision-making.
 
-## Learn More
+- 📦 **Batch Operations**  
+  Add bulk transactions like monthly salaries or fixed expenses with one click.
 
-To learn more about Next.js, take a look at the following resources:
+- 🗑️ **Bulk Delete**  
+  Select and delete multiple transactions with a "Select All" option.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Coming Soon
 
-## Deploy on Vercel
+- 👥 **Dynamic Employee Routes**  
+  Add, edit, and manage employees dynamically with associated salary data.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- 📆 **Attendance & Payroll Modules**  
+  Track attendance and auto-generate salary records based on working days.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 🔁 **Recurring Transactions**  
+  Setup monthly recurring entries like rent, utilities, etc.
+
+- 📂 **Client & Project CRM**  
+  Full CRM with:
+  - Client management
+  - Project tracking
+  - Invoicing and follow-ups
+
+---
+
+## 🚀 Tech Stack
+
+- **Next.js** (App Router)
+- **TypeScript**
+- **Tailwind CSS**
+- **Recharts**
+- **MongoDB (Planned)**
+- **Next.js API Routes (Server Functions)**
+
+---
+
+## 🧑‍💻 Developers
+
+Developed by [Muhammad Omer Baig](https://omerbaig.dev/)  
+Co-founder, [Scons Tech](https://sconstech.com/)
+
+---
+
+## 🏁 Getting Started
+
+1. Clone the repo  
+   ```bash
+   git clone https://github.com/yourusername/econs-dashboard.git
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+3. Run locally
+
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📬 Contact
+
+For inquiries or contributions:  
+📧 [omerbaigde@gmail.com](mailto:omerbaigde@gmail.com)  
+🌐 [omerbaig.dev](https://omerbaig.dev/)  
+🌐 [sconstech.com](https://sconstech.com/)  
+🌐 [econs.com.pk](https://www.econs.com.pk/)
