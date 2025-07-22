@@ -174,7 +174,7 @@ export default function DashboardPage() {
             {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
               <button
                 key={mode}
-                className={`px-3 py-1 rounded border ${
+                className={`px-3 py-1  cursor-pointer  rounded border ${
                   filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
                 }`}
                 onClick={() => setFilterMode(mode as any)}

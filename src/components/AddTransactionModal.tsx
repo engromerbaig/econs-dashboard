@@ -506,7 +506,7 @@ export default function AddTransactionModal({
                 title="Add Amount"
                 disabled={!amount || isNaN(parseInt(amount))}
               >
-                <FaPlus className="h-5 w-5 text-green-500" />
+                <FaPlus className="h-4 w-4 text-green-500" />
               </button>
             </div>
           )}
@@ -516,7 +516,7 @@ export default function AddTransactionModal({
             <div className="mb-2">
               <div className="text-sm font-semibold mb-1">Added Amounts:</div>
               <div className="text-lg font-bold text-gray-700">{formatPKR(totalAmount)}</div>
-              <div className="text-xs text-gray-500">{amountBreakdown}</div>
+              {/* <div className="text-xs text-gray-500">{amountBreakdown}</div> */}
               <div className="flex flex-wrap gap-1 mt-1">
                 {multipleAmounts.map((amt, index) => (
                   <span key={index} className="inline-flex items-center bg-gray-200 rounded px-2 py-1 text-xs">
