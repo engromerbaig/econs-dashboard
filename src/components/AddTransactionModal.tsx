@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Modal from './Modal';
 import { incomeCategories, expenseCategories, salaryMap, fixedExpenseMap } from './constants';
 import { Transaction, TransactionType } from './types';
-import { FaEdit, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaPlus } from 'react-icons/fa';
 import { formatPKR } from '@/lib/format';
 
 interface Props {
@@ -34,6 +34,7 @@ export default function AddTransactionModal({
   const [description, setDescription] = useState('');
   const [allowEditAmount, setAllowEditAmount] = useState(false);
   const [batchTransactions, setBatchTransactions] = useState<Transaction[]>([]);
+  const [multipleAmounts, setMultipleAmounts] = useState<number[]>([]);
 
   // Initialize date with proper logic
   const [date, setDate] = useState(() => {
@@ -68,6 +69,8 @@ export default function AddTransactionModal({
     } else {
       setCategory('Misc');
     }
+    setMultipleAmounts([]);
+    setCustomCategory('');
   }, [type]);
 
   // Update display amount when amount changes
@@ -79,16 +82,17 @@ export default function AddTransactionModal({
     }
   }, [amount]);
 
-  // put this just after the rest of your useEffects
-useEffect(() => {
-  if (type === 'income' && batchTransactions.length) {
-    setBatchTransactions([]);   // ✨ clear batch when we’re in income mode
-  }
-}, [type, batchTransactions.length])
+  useEffect(() => {
+    if (type === 'income' && batchTransactions.length) {
+      setBatchTransactions([]);
+    }
+  }, [type, batchTransactions.length]);
 
   const isSalary = type === 'expense' && category === 'Salary';
   const isFixedExpense = type === 'expense' && category === 'Fixed';
   const isPetrol = type === 'expense' && category === 'Petrol';
+  const isAlAzhar = type === 'expense' && category === 'Al Azhar Prints';
+  const isMisc = category === 'Misc';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
   const transactionMonth = useMemo(() => {
@@ -126,17 +130,21 @@ useEffect(() => {
     if (isSalary && employee && salaryMap[employee]) {
       setAmount(salaryMap[employee].toString());
       setDescription(`Salary for ${employee}`);
+      setMultipleAmounts([]);
     } else if (isFixedExpense && fixedExpense && fixedExpenseMap[fixedExpense]) {
       setAmount(fixedExpenseMap[fixedExpense].toString());
       setDescription(`${fixedExpense}`);
+      setMultipleAmounts([]);
     } else if (isPetrol && employee) {
       setDescription(`Petrol expense for ${employee}`);
+    } else if (isAlAzhar) {
+      setDescription(`Al Azhar Prints expense`);
     } else if (!allowEditAmount && (isSalary || isFixedExpense)) {
-      // Only clear amount and description for salary/fixed expense when not in edit mode
       setAmount('');
       setDescription('');
+      setMultipleAmounts([]);
     }
-  }, [employee, fixedExpense, isSalary, isFixedExpense, isPetrol, allowEditAmount]);
+  }, [employee, fixedExpense, isSalary, isFixedExpense, isPetrol, isAlAzhar, allowEditAmount]);
 
   useEffect(() => {
     if (isSalary && employee && alreadyPaidEmployees.includes(employee)) {
@@ -145,7 +153,6 @@ useEffect(() => {
     if (isFixedExpense && fixedExpense && alreadyPaidFixedExpenses.includes(fixedExpense)) {
       setFixedExpense('');
     }
-    // Reset batch transactions when date or existing transactions change
     setBatchTransactions([]);
   }, [transactionMonth, isSalary, employee, alreadyPaidEmployees, isFixedExpense, fixedExpense, alreadyPaidFixedExpenses]);
 
@@ -162,7 +169,7 @@ useEffect(() => {
   const handleAddAllSalaries = () => {
     const unpaidEmployees = Object.keys(salaryMap).filter((emp) => !alreadyPaidEmployees.includes(emp));
     const newBatchTransactions = unpaidEmployees.map((emp) => ({
-      id: Date.now() + Math.random(), // Temporary ID for rendering
+      id: Date.now() + Math.random(),
       type: 'expense' as TransactionType,
       date,
       amount: salaryMap[emp],
@@ -178,7 +185,7 @@ useEffect(() => {
       (exp) => !alreadyPaidFixedExpenses.includes(exp)
     );
     const newBatchTransactions = unpaidFixedExpenses.map((exp) => ({
-      id: Date.now() + Math.random(), // Temporary ID for rendering
+      id: Date.now() + Math.random(),
       type: 'expense' as TransactionType,
       date,
       amount: fixedExpenseMap[exp],
@@ -205,6 +212,7 @@ useEffect(() => {
 
   const handleClearBatch = () => {
     setBatchTransactions([]);
+    setMultipleAmounts([]);
   };
 
   const handleQuickAmount = (zeros: number) => {
@@ -213,8 +221,28 @@ useEffect(() => {
     setAmount(newAmount);
   };
 
+  const handleAddAmount = () => {
+    if (amount && !isNaN(parseInt(amount))) {
+      setMultipleAmounts((prev) => [...prev, parseInt(amount)]);
+      setAmount('');
+      setDisplayAmount('');
+    }
+  };
+
+  const handleRemoveAmount = (index: number) => {
+    setMultipleAmounts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const totalAmount = useMemo(() => {
+    return multipleAmounts.reduce((sum, amt) => sum + amt, 0);
+  }, [multipleAmounts]);
+
+  const amountBreakdown = useMemo(() => {
+    return multipleAmounts.map(amt => formatPKR(amt)).join('+');
+  }, [multipleAmounts]);
+
   const handleSubmit = async () => {
-    if (!batchTransactions.length) {
+    if (!batchTransactions.length && !multipleAmounts.length) {
       // Single transaction submission
       if (!amount || !date || (!category && !customCategory)) {
         alert('Fill all required fields');
@@ -262,12 +290,55 @@ useEffect(() => {
           setEmployee('');
           setFixedExpense('');
           setAllowEditAmount(false);
+          setMultipleAmounts([]);
         } else {
           alert(`Error: ${data.message || 'Something went wrong'}`);
         }
       } catch (err) {
         console.error('Submit error:', err);
         alert('Failed to submit transaction');
+      }
+    } else if (multipleAmounts.length) {
+      // Multiple amounts submission for Petrol or Al Azhar Prints
+      try {
+        for (const amt of multipleAmounts) {
+          const newTransaction: Transaction = {
+            id: Date.now() + Math.random(),
+            type,
+            date,
+            amount: amt,
+            category: customCategory || category,
+            description: isPetrol ? `Petrol expense for ${employee}` : `Al Azhar Prints expense`,
+            ...(isPetrol ? { employee } : {}),
+          };
+
+          const res = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newTransaction),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(`Error adding transaction: ${data.message || 'Something went wrong'}`);
+            return;
+          }
+          onAdd(newTransaction);
+        }
+        onClose();
+        setAmount('');
+        setCategory(type === 'income' ? 'OK Builder' : 'Misc');
+        setCustomCategory('');
+        setDescription('');
+        setType('expense');
+        setEmployee('');
+        setFixedExpense('');
+        setAllowEditAmount(false);
+        setMultipleAmounts([]);
+      } catch (err) {
+        console.error('Multiple amounts submit error:', err);
+        alert('Failed to submit transactions');
       }
     } else {
       // Batch transaction submission
@@ -297,6 +368,7 @@ useEffect(() => {
         setEmployee('');
         setFixedExpense('');
         setAllowEditAmount(false);
+        setMultipleAmounts([]);
       } catch (err) {
         console.error('Batch submit error:', err);
         alert('Failed to submit batch transactions');
@@ -411,14 +483,36 @@ useEffect(() => {
               </button>
             )}
           </div>
-          
+
+          {(isPetrol || isAlAzhar) && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={handleAddAmount}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                title="Add Amount"
+                disabled={!amount || isNaN(parseInt(amount))}
+              >
+                <FaPlus className="h-5 w-5 text-green-500" />
+              </button>
+            </div>
+          )}
+
+          {/* Display multiple amounts and total */}
+          {(isPetrol || isAlAzhar) && multipleAmounts.length > 0 && (
+            <div className="mb-2">
+              <div className="text-sm font-semibold mb-1">Added Amounts:</div>
+              <div className="text-lg font-bold text-gray-700">{formatPKR(totalAmount)}</div>
+              <div className="text-xs text-gray-500">{amountBreakdown}</div>
+            </div>
+          )}
+
           {/* Display formatted amount */}
           {displayAmount && (
             <div className="mb-2 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded">
               {displayAmount}
             </div>
           )}
-          
+
           {/* Quick amount buttons */}
           <div className="flex gap-2 mb-3">
             <button
@@ -442,8 +536,7 @@ useEffect(() => {
             >
               +000
             </button>
-
-             <button
+            <button
               type="button"
               onClick={() => handleQuickAmount(2)}
               className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 cursor-pointer"
@@ -459,9 +552,12 @@ useEffect(() => {
               setCategory(e.target.value);
               setEmployee('');
               setFixedExpense('');
-              // Don't clear amount here - this was the bug
               setAllowEditAmount(false);
               setBatchTransactions([]);
+              setMultipleAmounts([]);
+              if (e.target.value !== 'Misc') {
+                setCustomCategory('');
+              }
             }}
           >
             <option value="">Select Category</option>
@@ -515,14 +611,15 @@ useEffect(() => {
             onChange={(e) => setDate(e.target.value)}
           />
 
-          <input
-            type="text"
-            placeholder="Or add new category"
-            className="w-full mb-3 border px-3 py-2 rounded"
-            value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value)}
-            disabled={isSalary || isFixedExpense || isPetrol}
-          />
+          {isMisc && (
+            <input
+              type="text"
+              placeholder="Or add new category"
+              className="w-full mb-3 border px-3 py-2 rounded"
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+            />
+          )}
 
           <input
             type="text"
@@ -538,7 +635,7 @@ useEffect(() => {
         onClick={handleSubmit}
         className="w-full bg-black cursor-pointer text-white py-2 rounded"
       >
-        {batchTransactions.length > 0 ? 'Save All' : 'Save'}
+        {batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Save All' : 'Save'}
       </button>
     </Modal>
   );
