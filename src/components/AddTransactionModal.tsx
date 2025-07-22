@@ -29,6 +29,11 @@ export default function AddTransactionModal({
   const [customCategory, setCustomCategory] = useState('');
   const [employee, setEmployee] = useState('');
   const [fixedExpense, setFixedExpense] = useState('');
+  const [description, setDescription] = useState('');
+  const [allowEditAmount, setAllowEditAmount] = useState(false);
+  const [batchTransactions, setBatchTransactions] = useState<Transaction[]>([]);
+
+  // Initialize date with proper logic
   const [date, setDate] = useState(() => {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -40,9 +45,28 @@ export default function AddTransactionModal({
       return now.toISOString().slice(0, 10);
     }
   });
-  const [description, setDescription] = useState('');
-  const [allowEditAmount, setAllowEditAmount] = useState(false);
-  const [batchTransactions, setBatchTransactions] = useState<Transaction[]>([]);
+
+  // Update date when filterMode or selectedMonth changes
+  useEffect(() => {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (filterMode === 'month' && selectedMonth === currentMonth) {
+      setDate(now.toISOString().slice(0, 10));
+    } else if (filterMode === 'month') {
+      setDate(`${selectedMonth}-01`);
+    } else {
+      setDate(now.toISOString().slice(0, 10));
+    }
+  }, [filterMode, selectedMonth]);
+
+  // Set default categories when type changes
+  useEffect(() => {
+    if (type === 'income') {
+      setCategory('OK Builder');
+    } else {
+      setCategory('Misc');
+    }
+  }, [type]);
 
   const isSalary = type === 'expense' && category === 'Salary';
   const isFixedExpense = type === 'expense' && category === 'Fixed';
@@ -89,7 +113,8 @@ export default function AddTransactionModal({
       setDescription(`${fixedExpense}`);
     } else if (isPetrol && employee) {
       setDescription(`Petrol expense for ${employee}`);
-    } else if (!allowEditAmount) {
+    } else if (!allowEditAmount && (isSalary || isFixedExpense)) {
+      // Only clear amount and description for salary/fixed expense when not in edit mode
       setAmount('');
       setDescription('');
     }
@@ -164,6 +189,12 @@ export default function AddTransactionModal({
     setBatchTransactions([]);
   };
 
+  const handleQuickAmount = (zeros: number) => {
+    const currentAmount = amount || '0';
+    const newAmount = currentAmount + '0'.repeat(zeros);
+    setAmount(newAmount);
+  };
+
   const handleSubmit = async () => {
     if (!batchTransactions.length) {
       // Single transaction submission
@@ -206,7 +237,7 @@ export default function AddTransactionModal({
           onAdd(newTransaction);
           onClose();
           setAmount('');
-          setCategory('');
+          setCategory(type === 'income' ? 'OK Builder' : 'Misc');
           setCustomCategory('');
           setDescription('');
           setType('expense');
@@ -241,7 +272,7 @@ export default function AddTransactionModal({
         onClose();
         setBatchTransactions([]);
         setAmount('');
-        setCategory('');
+        setCategory(type === 'income' ? 'OK Builder' : 'Misc');
         setCustomCategory('');
         setDescription('');
         setType('expense');
@@ -344,7 +375,7 @@ export default function AddTransactionModal({
 
       {batchTransactions.length === 0 && (
         <>
-          <div className="relative mb-3">
+          <div className="relative mb-2">
             <input
               type="number"
               placeholder="Amount (PKR)"
@@ -362,6 +393,31 @@ export default function AddTransactionModal({
               </button>
             )}
           </div>
+          
+          {/* Quick amount buttons */}
+          <div className="flex gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => handleQuickAmount(5)}
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+            >
+              +00000
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAmount(4)}
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+            >
+              +0000
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAmount(3)}
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+            >
+              +000
+            </button>
+          </div>
 
           <select
             className="w-full mb-3 border px-3 py-2 rounded"
@@ -370,8 +426,7 @@ export default function AddTransactionModal({
               setCategory(e.target.value);
               setEmployee('');
               setFixedExpense('');
-              setAmount('');
-              setDescription('');
+              // Don't clear amount here - this was the bug
               setAllowEditAmount(false);
               setBatchTransactions([]);
             }}
