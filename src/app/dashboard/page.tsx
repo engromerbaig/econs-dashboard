@@ -119,7 +119,7 @@ export default function DashboardPage() {
         <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
         <button
           onClick={() => (window.location.href = '/')}
-          className="bg-black text-white px-4 py-1 rounded hover:bg-black/80"
+          className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
         >
           Logout
         </button>
