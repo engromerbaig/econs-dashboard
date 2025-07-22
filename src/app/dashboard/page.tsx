@@ -7,6 +7,7 @@ import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
+import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -75,7 +76,47 @@ export default function DashboardPage() {
 
   // Calculate unique months with transactions
   const uniqueMonths = new Set(filtered.map(tx => tx.date.slice(0, 7))).size;
-  const profitPerMonth = uniqueMonths > 0 ? (totalIncome - totalExpense) / uniqueMonths : 0;
+  const profitPerMonth = uniqueMonths > 0 ? Math.round((totalIncome - totalExpense) / uniqueMonths) : 0;
+
+  // Calculate previous month's profit for comparison
+  const getPreviousMonth = (month: string) => {
+    const [year, monthNum] = month.split('-').map(Number);
+    const date = new Date(year, monthNum - 1, 1); // Set to first day of the current month
+    date.setMonth(date.getMonth() - 1); // Subtract one month
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const prevMonth = getPreviousMonth(selectedMonth);
+  const prevMonthTransactions = transactions.filter(tx => tx.date.startsWith(prevMonth));
+  const prevMonthIncome = prevMonthTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+  const prevMonthExpense = prevMonthTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+  const prevMonthProfit = prevMonthIncome - prevMonthExpense;
+  const currentProfit = totalIncome - totalExpense;
+
+  // Debug logs to inspect values
+  console.log('Selected Month:', selectedMonth);
+  console.log('Previous Month:', prevMonth);
+  console.log('Current Profit:', currentProfit);
+  console.log('Previous Month Profit:', prevMonthProfit);
+  console.log('Previous Month Transactions:', prevMonthTransactions);
+
+  // Calculate percentage change
+  let percentageChange = 0;
+  let changeText = '';
+  if (filterMode === 'month') {
+    if (prevMonthTransactions.length === 0 && filtered.length === 0) {
+      changeText = 'No data to compare';
+    } else if (prevMonthProfit === 0 && currentProfit === 0) {
+      changeText = 'No change';
+    } else if (prevMonthProfit === 0 && currentProfit !== 0) {
+      changeText = `${currentProfit > 0 ? 'Positive' : 'Negative'} profit started`;
+    } else {
+      percentageChange = ((currentProfit - prevMonthProfit) / Math.abs(prevMonthProfit)) * 100;
+      changeText = `${Math.abs(percentageChange).toFixed(1)}% ${percentageChange >= 0 ? 'increase' : 'decrease'}`;
+    }
+  }
+
+  const isIncrease = percentageChange >= 0 && prevMonthProfit !== 0;
 
   return (
     <main className="min-h-screen bg-white">
@@ -96,28 +137,41 @@ export default function DashboardPage() {
         {/* Summary Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
           <div className="p-10 items-center bg-green-100 rounded shadow">
-            <h2 className="text-base font-semibold">Income</h2>
+            <h2 className="text-sm font-semibold">Income</h2>
             <p className="text-2xl font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
           </div>
           <div className="p-10 items-center bg-red-100 rounded shadow">
-            <h2 className="text-base font-semibold">Expense</h2>
+            <h2 className="text-sm font-semibold">Expense</h2>
             <p className="text-2xl font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
           </div>
           <div className="p-10 items-center bg-blue-100 rounded shadow">
-            <h2 className="text-base font-semibold">Company Profit</h2>
+            <h2 className="text-sm font-semibold">Profit</h2>
             <p className="text-2xl font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
+            {filterMode === 'month' && (
+              <p className="text-sm flex items-center gap-1 mt-2">
+                {changeText.includes('No') || changeText.includes('started') ? (
+                  <span>{changeText}</span>
+                ) : (
+                  <>
+                    {isIncrease ? (
+                      <FaArrowUp className="text-green-500" />
+                    ) : (
+                      <FaArrowDown className="text-red-500" />
+                    )}
+                    <span className={isIncrease ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{changeText}</span>
+                  </>
+                )}
+              </p>
+            )}
           </div>
           <div className="p-10 items-center bg-indigo-100 rounded shadow">
-            <h2 className="text-base font-semibold">Salary Total</h2>
+            <h2 className="text-sm font-semibold">Salary Total</h2>
             <p className="text-2xl font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
           </div>
           <div className="p-10 items-center bg-purple-100 rounded shadow">
-  <h2 className="text-base font-semibold">Profit/Month</h2>
-  <p className="text-2xl font-bold">
-    PKR {Math.round(profitPerMonth).toLocaleString('en-IN')}
-  </p>
-</div>
-
+            <h2 className="text-sm font-semibold">Profit/Month</h2>
+            <p className="text-2xl font-bold">PKR {Math.round(profitPerMonth).toLocaleString('en-IN')}</p>
+          </div>
         </div>
 
         {/* Filters and Actions */}
