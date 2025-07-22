@@ -19,7 +19,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     if (!email || !password) {
-      setError('Email and password are required');
       toast.error('Email and password are required', {
         style: {
           background: '#fef2f2',
@@ -45,7 +44,6 @@ export default function LoginPage() {
 
       if (data.status !== 'success') {
         const errorMessage = data.message || 'Login failed';
-        setError(errorMessage);
         toast.error(errorMessage, {
           style: {
             background: '#fef2f2',
@@ -69,7 +67,6 @@ export default function LoginPage() {
     } catch (err) {
       console.error('Login request error:', err);
       const errorMessage = 'Something went wrong. Please try again.';
-      setError(errorMessage);
       toast.error(errorMessage, {
         style: {
           background: '#fef2f2',
@@ -96,7 +93,6 @@ export default function LoginPage() {
                 className="object-contain"
               />
             </div>
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
@@ -163,7 +159,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md mx-auto text-sm text-gray-600 space-y-2 text-left absolute bottom-6 md:bottom-12">
           <div className="flex items-center gap-2">
             <FaMapMarkerAlt className="text-econs-blue" />
-            <p>Office 1A1, Westland Trade Center, Jinnah Housing Society Karachi, Pakistan</p>
+            <p>Office 1A1, Westland Trade Center, Jinnah Housing Society Karachi</p>
           </div>
           <div className="flex items-center gap-2">
             <FaPhone className="text-econs-blue" />
@@ -183,7 +179,7 @@ export default function LoginPage() {
           priority
         />
       </div>
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster position="top-left" reverseOrder={false} />
     </main>
   );
 }
