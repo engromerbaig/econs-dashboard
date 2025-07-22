@@ -635,7 +635,7 @@ export default function AddTransactionModal({
         onClick={handleSubmit}
         className="w-full bg-black cursor-pointer text-white py-2 rounded"
       >
-        {batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Save All' : 'Save'}
+        {batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Add All' : 'Add'}
       </button>
     </Modal>
   );
