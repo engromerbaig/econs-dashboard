@@ -37,12 +37,16 @@ export default function DashboardPage() {
   }, []);
 
   const handleAdd = (tx: Transaction) => {
-    setTransactions([tx, ...transactions]);
+    setTransactions(prev => [tx, ...prev]);
+  };
+
+  const handleAddBatch = (txs: Transaction[]) => {
+    setTransactions(prev => [...txs, ...prev]);
   };
 
   const handleDelete = (transactionId: string) => {
-    setTransactions(prevTransactions => 
-      prevTransactions.filter(tx => {
+    setTransactions(prev =>
+      prev.filter(tx => {
         const txId = tx._id ? tx._id.toString() : tx.id?.toString();
         return txId !== transactionId;
       })
@@ -74,15 +78,13 @@ export default function DashboardPage() {
     .filter(tx => tx.category.toLowerCase().includes('salary'))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  // Calculate unique months with transactions
   const uniqueMonths = new Set(filtered.map(tx => tx.date.slice(0, 7))).size;
   const profitPerMonth = uniqueMonths > 0 ? Math.round((totalIncome - totalExpense) / uniqueMonths) : 0;
 
-  // Calculate previous month's profit for comparison
   const getPreviousMonth = (month: string) => {
     const [year, monthNum] = month.split('-').map(Number);
-    const date = new Date(year, monthNum - 1, 1); // Set to first day of the current month
-    date.setMonth(date.getMonth() - 1); // Subtract one month
+    const date = new Date(year, monthNum - 1, 1);
+    date.setMonth(date.getMonth() - 1);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
 
@@ -93,14 +95,6 @@ export default function DashboardPage() {
   const prevMonthProfit = prevMonthIncome - prevMonthExpense;
   const currentProfit = totalIncome - totalExpense;
 
-  // Debug logs to inspect values
-  console.log('Selected Month:', selectedMonth);
-  console.log('Previous Month:', prevMonth);
-  console.log('Current Profit:', currentProfit);
-  console.log('Previous Month Profit:', prevMonthProfit);
-  console.log('Previous Month Transactions:', prevMonthTransactions);
-
-  // Calculate percentage change
   let percentageChange = 0;
   let changeText = '';
   if (filterMode === 'month') {
@@ -124,10 +118,8 @@ export default function DashboardPage() {
       <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
         <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
         <button
-          onClick={() => {
-            window.location.href = '/';
-          }}
-          className="bg-black cursor-pointer text-white px-4 py-1 rounded hover:bg-black/80 transition"
+          onClick={() => (window.location.href = '/')}
+          className="bg-black text-white px-4 py-1 rounded hover:bg-black/80"
         >
           Logout
         </button>
@@ -136,15 +128,15 @@ export default function DashboardPage() {
       <div className="p-6">
         {/* Summary Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
-          <div className="p-10 items-center bg-green-100 rounded shadow">
+          <div className="p-10 bg-green-100 rounded shadow">
             <h2 className="text-sm font-semibold">Income</h2>
             <p className="text-2xl font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-10 items-center bg-red-100 rounded shadow">
+          <div className="p-10 bg-red-100 rounded shadow">
             <h2 className="text-sm font-semibold">Expense</h2>
             <p className="text-2xl font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-10 items-center bg-blue-100 rounded shadow">
+          <div className="p-10 bg-blue-100 rounded shadow">
             <h2 className="text-sm font-semibold">Profit</h2>
             <p className="text-2xl font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
             {filterMode === 'month' && (
@@ -158,19 +150,21 @@ export default function DashboardPage() {
                     ) : (
                       <FaArrowDown className="text-red-500" />
                     )}
-                    <span className={isIncrease ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{changeText}</span>
+                    <span className={isIncrease ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>
+                      {changeText}
+                    </span>
                   </>
                 )}
               </p>
             )}
           </div>
-          <div className="p-10 items-center bg-indigo-100 rounded shadow">
+          <div className="p-10 bg-indigo-100 rounded shadow">
             <h2 className="text-sm font-semibold">Salary Total</h2>
             <p className="text-2xl font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-10 items-center bg-purple-100 rounded shadow">
+          <div className="p-10 bg-purple-100 rounded shadow">
             <h2 className="text-sm font-semibold">Profit/Month</h2>
-            <p className="text-2xl font-bold">PKR {Math.round(profitPerMonth).toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">PKR {profitPerMonth.toLocaleString('en-IN')}</p>
           </div>
         </div>
 
@@ -180,7 +174,7 @@ export default function DashboardPage() {
             {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
               <button
                 key={mode}
-                className={`px-3 py-1 cursor-pointer rounded border ${
+                className={`px-3 py-1 rounded border ${
                   filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
                 }`}
                 onClick={() => setFilterMode(mode as any)}
@@ -201,26 +195,26 @@ export default function DashboardPage() {
 
           <button
             onClick={() => setModalOpen(true)}
-            className="bg-black text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-800 transition"
+            className="bg-black text-white cursor-pointer px-4 py-2 rounded hover:bg-gray-800"
           >
             + Add Transaction
           </button>
 
           <button
             onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
-            className="bg-gray-200 text-black px-4 py-2 cursor-pointer rounded border border-gray-300 hover:bg-gray-300"
+            className="bg-gray-200 text-black cursor-pointer px-4 py-2 rounded border hover:bg-gray-300"
           >
             ⬇️ Export CSV
           </button>
         </div>
 
-        {/* Transactions, Summary, and Chart */}
+        {/* Transactions and Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <TransactionList transactions={filtered} onDelete={handleDelete} />
           <TransactionSummary transactions={filtered} />
         </div>
 
-        {/* Monthly Net Profit Chart */}
+        {/* Chart */}
         <MonthlyNetProfitChart transactions={filtered} />
       </div>
 
@@ -229,6 +223,7 @@ export default function DashboardPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
+        onAddBatch={handleAddBatch} // ✅ Added here
         existingTransactions={transactions}
         selectedMonth={selectedMonth}
         filterMode={filterMode}

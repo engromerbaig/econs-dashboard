@@ -11,6 +11,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (tx: Transaction) => void;
+  onAddBatch: (transactions: Transaction[]) => void; // Add this new prop for batch operations
   existingTransactions: Transaction[];
   selectedMonth: string;
   filterMode: 'month' | '3m' | '6m' | '1y' | '3y' | 'all';
@@ -20,6 +21,7 @@ export default function AddTransactionModal({
   isOpen,
   onClose,
   onAdd,
+  onAddBatch, // Use this for batch operations
   existingTransactions,
   selectedMonth,
   filterMode,
@@ -48,6 +50,11 @@ export default function AddTransactionModal({
       return now.toISOString().slice(0, 10);
     }
   });
+
+  // Generate unique ID
+  const generateUniqueId = () => {
+    return Date.now() + Math.random() * 1000000;
+  };
 
   // Update date when filterMode or selectedMonth changes
   useEffect(() => {
@@ -168,8 +175,8 @@ export default function AddTransactionModal({
 
   const handleAddAllSalaries = () => {
     const unpaidEmployees = Object.keys(salaryMap).filter((emp) => !alreadyPaidEmployees.includes(emp));
-    const newBatchTransactions = unpaidEmployees.map((emp) => ({
-      id: Date.now() + Math.random(),
+    const newBatchTransactions = unpaidEmployees.map((emp, index) => ({
+      id: generateUniqueId() + index, // Ensure unique IDs
       type: 'expense' as TransactionType,
       date,
       amount: salaryMap[emp],
@@ -184,8 +191,8 @@ export default function AddTransactionModal({
     const unpaidFixedExpenses = Object.keys(fixedExpenseMap).filter(
       (exp) => !alreadyPaidFixedExpenses.includes(exp)
     );
-    const newBatchTransactions = unpaidFixedExpenses.map((exp) => ({
-      id: Date.now() + Math.random(),
+    const newBatchTransactions = unpaidFixedExpenses.map((exp, index) => ({
+      id: generateUniqueId() + index, // Ensure unique IDs
       type: 'expense' as TransactionType,
       date,
       amount: fixedExpenseMap[exp],
@@ -241,6 +248,19 @@ export default function AddTransactionModal({
     return multipleAmounts.map(amt => formatPKR(amt)).join('+');
   }, [multipleAmounts]);
 
+  const resetForm = () => {
+    setAmount('');
+    setCategory(type === 'income' ? 'OK Builder' : 'Misc');
+    setCustomCategory('');
+    setDescription('');
+    setType('expense');
+    setEmployee('');
+    setFixedExpense('');
+    setAllowEditAmount(false);
+    setMultipleAmounts([]);
+    setBatchTransactions([]);
+  };
+
   const handleSubmit = async () => {
     if (!batchTransactions.length && !multipleAmounts.length) {
       // Single transaction submission
@@ -260,7 +280,7 @@ export default function AddTransactionModal({
       }
 
       const newTransaction: Transaction = {
-        id: Date.now(),
+        id: generateUniqueId(),
         type,
         date,
         amount: parseInt(amount),
@@ -282,15 +302,7 @@ export default function AddTransactionModal({
         if (res.ok) {
           onAdd(newTransaction);
           onClose();
-          setAmount('');
-          setCategory(type === 'income' ? 'OK Builder' : 'Misc');
-          setCustomCategory('');
-          setDescription('');
-          setType('expense');
-          setEmployee('');
-          setFixedExpense('');
-          setAllowEditAmount(false);
-          setMultipleAmounts([]);
+          resetForm();
         } else {
           alert(`Error: ${data.message || 'Something went wrong'}`);
         }
@@ -300,10 +312,13 @@ export default function AddTransactionModal({
       }
     } else if (multipleAmounts.length) {
       // Multiple amounts submission for Petrol or Al Azhar Prints
+      const newTransactions: Transaction[] = [];
+      
       try {
-        for (const amt of multipleAmounts) {
+        for (let i = 0; i < multipleAmounts.length; i++) {
+          const amt = multipleAmounts[i];
           const newTransaction: Transaction = {
-            id: Date.now() + Math.random(),
+            id: generateUniqueId() + i, // Ensure unique IDs
             type,
             date,
             amount: amt,
@@ -324,30 +339,34 @@ export default function AddTransactionModal({
             alert(`Error adding transaction: ${data.message || 'Something went wrong'}`);
             return;
           }
-          onAdd(newTransaction);
+          
+          newTransactions.push(newTransaction);
         }
+        
+        // Use batch callback to update all transactions at once
+        onAddBatch(newTransactions);
         onClose();
-        setAmount('');
-        setCategory(type === 'income' ? 'OK Builder' : 'Misc');
-        setCustomCategory('');
-        setDescription('');
-        setType('expense');
-        setEmployee('');
-        setFixedExpense('');
-        setAllowEditAmount(false);
-        setMultipleAmounts([]);
+        resetForm();
       } catch (err) {
         console.error('Multiple amounts submit error:', err);
         alert('Failed to submit transactions');
       }
     } else {
       // Batch transaction submission
+      const processedTransactions: Transaction[] = [];
+      
       try {
-        for (const tx of batchTransactions) {
+        for (let i = 0; i < batchTransactions.length; i++) {
+          const tx = batchTransactions[i];
+          const transactionWithUniqueId = { 
+            ...tx, 
+            id: generateUniqueId() + i // Ensure unique IDs
+          };
+          
           const res = await fetch('/api/transactions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...tx, id: Date.now() + Math.random() }),
+            body: JSON.stringify(transactionWithUniqueId),
           });
 
           const data = await res.json();
@@ -356,19 +375,14 @@ export default function AddTransactionModal({
             alert(`Error adding ${tx.employee || tx.fixedExpense}: ${data.message || 'Something went wrong'}`);
             return;
           }
-          onAdd({ ...tx, id: Date.now() + Math.random() });
+          
+          processedTransactions.push(transactionWithUniqueId);
         }
+        
+        // Use batch callback to update all transactions at once
+        onAddBatch(processedTransactions);
         onClose();
-        setBatchTransactions([]);
-        setAmount('');
-        setCategory(type === 'income' ? 'OK Builder' : 'Misc');
-        setCustomCategory('');
-        setDescription('');
-        setType('expense');
-        setEmployee('');
-        setFixedExpense('');
-        setAllowEditAmount(false);
-        setMultipleAmounts([]);
+        resetForm();
       } catch (err) {
         console.error('Batch submit error:', err);
         alert('Failed to submit batch transactions');
@@ -503,6 +517,19 @@ export default function AddTransactionModal({
               <div className="text-sm font-semibold mb-1">Added Amounts:</div>
               <div className="text-lg font-bold text-gray-700">{formatPKR(totalAmount)}</div>
               <div className="text-xs text-gray-500">{amountBreakdown}</div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {multipleAmounts.map((amt, index) => (
+                  <span key={index} className="inline-flex items-center bg-gray-200 rounded px-2 py-1 text-xs">
+                    {formatPKR(amt)}
+                    <button
+                      onClick={() => handleRemoveAmount(index)}
+                      className="ml-1 text-red-500 hover:text-red-700"
+                    >
+                      <FaTimes className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
