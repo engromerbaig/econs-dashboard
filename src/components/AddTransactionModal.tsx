@@ -5,6 +5,7 @@ import Modal from './Modal';
 import { incomeCategories, expenseCategories, salaryMap, fixedExpenseMap } from './constants';
 import { Transaction, TransactionType } from './types';
 import { FaEdit, FaTimes } from 'react-icons/fa';
+import { formatPKR } from '@/lib/format';
 
 interface Props {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function AddTransactionModal({
 }: Props) {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [employee, setEmployee] = useState('');
@@ -67,6 +69,15 @@ export default function AddTransactionModal({
       setCategory('Misc');
     }
   }, [type]);
+
+  // Update display amount when amount changes
+  useEffect(() => {
+    if (amount && !isNaN(parseInt(amount))) {
+      setDisplayAmount(formatPKR(parseInt(amount)));
+    } else {
+      setDisplayAmount('');
+    }
+  }, [amount]);
 
   const isSalary = type === 'expense' && category === 'Salary';
   const isFixedExpense = type === 'expense' && category === 'Fixed';
@@ -394,26 +405,33 @@ export default function AddTransactionModal({
             )}
           </div>
           
+          {/* Display formatted amount */}
+          {displayAmount && (
+            <div className="mb-2 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded">
+              {displayAmount}
+            </div>
+          )}
+          
           {/* Quick amount buttons */}
           <div className="flex gap-2 mb-3">
             <button
               type="button"
               onClick={() => handleQuickAmount(5)}
-              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 cursor-pointer"
             >
               +00000
             </button>
             <button
               type="button"
               onClick={() => handleQuickAmount(4)}
-              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 cursor-pointer"
             >
               +0000
             </button>
             <button
               type="button"
               onClick={() => handleQuickAmount(3)}
-              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 cursor-pointer"
             >
               +000
             </button>
