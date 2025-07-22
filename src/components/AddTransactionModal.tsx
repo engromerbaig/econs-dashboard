@@ -435,6 +435,14 @@ export default function AddTransactionModal({
             >
               +000
             </button>
+
+             <button
+              type="button"
+              onClick={() => handleQuickAmount(2)}
+              className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 cursor-pointer"
+            >
+              +00
+            </button>
           </div>
 
           <select
