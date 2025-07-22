@@ -174,7 +174,7 @@ export default function DashboardPage() {
             {['month', '3m', '6m', '1y', '3y', 'all'].map((mode) => (
               <button
                 key={mode}
-                className={`px-3 py-1  cursor-pointer  rounded border ${
+                className={`px-3 py-1 cursor-pointer rounded border ${
                   filterMode === mode ? 'bg-black text-white' : 'bg-white text-black'
                 }`}
                 onClick={() => setFilterMode(mode as any)}
@@ -201,7 +201,7 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => exportTransactionsToCSV(transactions, selectedMonth)}
+            onClick={() => exportTransactionsToCSV(transactions, selectedMonth, filterMode)}
             className="bg-gray-200 text-black cursor-pointer px-4 py-2 rounded border hover:bg-gray-300"
           >
             ⬇️ Export CSV
@@ -223,7 +223,7 @@ export default function DashboardPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
-        onAddBatch={handleAddBatch} // ✅ Added here
+        onAddBatch={handleAddBatch}
         existingTransactions={transactions}
         selectedMonth={selectedMonth}
         filterMode={filterMode}
