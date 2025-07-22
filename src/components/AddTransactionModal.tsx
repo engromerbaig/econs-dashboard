@@ -79,6 +79,13 @@ export default function AddTransactionModal({
     }
   }, [amount]);
 
+  // put this just after the rest of your useEffects
+useEffect(() => {
+  if (type === 'income' && batchTransactions.length) {
+    setBatchTransactions([]);   // ✨ clear batch when we’re in income mode
+  }
+}, [type, batchTransactions.length])
+
   const isSalary = type === 'expense' && category === 'Salary';
   const isFixedExpense = type === 'expense' && category === 'Fixed';
   const isPetrol = type === 'expense' && category === 'Petrol';
