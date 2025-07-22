@@ -31,6 +31,9 @@ export const salaryMap: Record<string, number> = {
 export const fixedExpenseMap: Record<string, number> = {
   'Rent': 35000,
   'Electricity Bill': 33000,
+    'Water Bill': 1115,
+    'PTCL Bill': 2340,
+
   'Office Maintenance': 5140,
   'Petty Cash': 7000,
   'Naila Cash': 50000,
