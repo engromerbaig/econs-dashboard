@@ -2,21 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import bcrypt from 'bcryptjs';
 
-// Predefined users with hashed passwords (hashed with bcrypt)
-const users = [
-  {
-    email: 'omer@econs.com',
-    password: '$2a$12$ZKOdnIWbTE/KcPTFVxjumuGupWgIjivuWCU70QIrjOj5XxJCdbSKu', // Password: admin
-    role: 'superadmin',
-  },
-  {
-    email: 'admin@econs.com',
-    password: '$2a$12$XBRS//CcksHHTwlTjdPmpu18mvsCsngKft0d8SrUEjhgMaAyl70p.', // Password: harisadmin
-    role: 'admin',
-  },
-];
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,37 +11,41 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
 
-    // Input validation
-    if (!email || !password) {
-      setError('Email and password are required');
+  if (!email || !password) {
+    setError('Email and password are required');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    if (data.status !== 'success') {
+      setError(data.message || 'Login failed');
       return;
     }
 
-    // Find user
-    const user = users.find(u => u.email === email);
-    if (!user) {
-      setError('Invalid email or password');
-      return;
-    }
+    localStorage.setItem('userSession', JSON.stringify({
+      email: data.user.email,
+      role: data.user.role,
+      loggedInAt: Date.now(),
+    }));
 
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      setError('Invalid email or password');
-      return;
-    }
-
-    // Store user session in localStorage
-    const sessionData = { email: user.email, role: user.role, loggedInAt: Date.now() };
-    localStorage.setItem('userSession', JSON.stringify(sessionData));
-
-    // Redirect to dashboard
     router.push('/dashboard');
-  };
+  } catch (err) {
+    console.error(err);
+    setError('Something went wrong. Please try again.');
+  }
+};
+
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white p-4">
