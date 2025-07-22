@@ -5,7 +5,7 @@ import AddTransactionModal from '@/components/AddTransactionModal';
 import { Transaction } from '@/components/types';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
-import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart'; // Import the new component
+import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 
 export default function DashboardPage() {
@@ -39,18 +39,14 @@ export default function DashboardPage() {
     setTransactions([tx, ...transactions]);
   };
 
-  // New delete handler// Updated handleDelete function for the Dashboard component
-// Replace the existing handleDelete function with this:
-
-const handleDelete = (transactionId: string) => {
-  setTransactions(prevTransactions => 
-    prevTransactions.filter(tx => {
-      // Check both _id and id fields to ensure proper filtering
-      const txId = tx._id ? tx._id.toString() : tx.id?.toString();
-      return txId !== transactionId;
-    })
-  );
-};
+  const handleDelete = (transactionId: string) => {
+    setTransactions(prevTransactions => 
+      prevTransactions.filter(tx => {
+        const txId = tx._id ? tx._id.toString() : tx.id?.toString();
+        return txId !== transactionId;
+      })
+    );
+  };
 
   const getDateXMonthsAgo = (months: number): string => {
     const d = new Date();
@@ -77,6 +73,10 @@ const handleDelete = (transactionId: string) => {
     .filter(tx => tx.category.toLowerCase().includes('salary'))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
+  // Calculate unique months with transactions
+  const uniqueMonths = new Set(filtered.map(tx => tx.date.slice(0, 7))).size;
+  const profitPerMonth = uniqueMonths > 0 ? (totalIncome - totalExpense) / uniqueMonths : 0;
+
   return (
     <main className="min-h-screen bg-white">
       {/* Top Navbar */}
@@ -94,16 +94,16 @@ const handleDelete = (transactionId: string) => {
 
       <div className="p-6">
         {/* Summary Boxes */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
           <div className="p-10 items-center bg-green-100 rounded shadow">
             <h2 className="text-base font-semibold">Income</h2>
             <p className="text-2xl font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-10   items-center bg-red-100 rounded shadow">
+          <div className="p-10 items-center bg-red-100 rounded shadow">
             <h2 className="text-base font-semibold">Expense</h2>
             <p className="text-2xl font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
           </div>
-          <div className="p-10  items-center bg-blue-100 rounded shadow">
+          <div className="p-10 items-center bg-blue-100 rounded shadow">
             <h2 className="text-base font-semibold">Company Profit</h2>
             <p className="text-2xl font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
           </div>
@@ -111,6 +111,13 @@ const handleDelete = (transactionId: string) => {
             <h2 className="text-base font-semibold">Salary Total</h2>
             <p className="text-2xl font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
           </div>
+          <div className="p-10 items-center bg-purple-100 rounded shadow">
+  <h2 className="text-base font-semibold">Profit/Month</h2>
+  <p className="text-2xl font-bold">
+    PKR {Math.round(profitPerMonth).toLocaleString('en-IN')}
+  </p>
+</div>
+
         </div>
 
         {/* Filters and Actions */}
