@@ -7,6 +7,7 @@ import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import EmployeesModal from '@/components/EmployeesModal';
+import AttendanceMarker from '@/components/AttendanceMarker';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { CiLogout } from 'react-icons/ci';
@@ -288,6 +289,9 @@ export default function DashboardPage() {
             ⬇️ Export CSV
           </button>
         </div>
+
+        {/* Attendance Marker */}
+        <AttendanceMarker />
 
         {/* Transactions and Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

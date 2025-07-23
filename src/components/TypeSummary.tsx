@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
@@ -10,6 +11,12 @@ interface Props {
   transactions: Transaction[];
   type: string;
   showChartOnly?: boolean;
+}
+
+interface AttendanceRecord {
+  employee: string;
+  date: string;
+  status: 'present' | 'absent';
 }
 
 export default function TypeSummary({ transactions, type, showChartOnly = false }: Props) {
@@ -35,12 +42,40 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
 
   const total = transactions.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0);
 
-  // Static attendance data (placeholder)
-  const attendanceData = {
-    present: 22,
-    absent: 3,
-    total: 25,
-  };
+  // Dynamic attendance data
+  const [attendanceData, setAttendanceData] = useState<{
+    present: number;
+    absent: number;
+    total: number;
+  }>({ present: 0, absent: 0, total: 0 });
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      if (!isEmployee) return;
+      try {
+        const now = new Date();
+        const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const res = await fetch(`/api/attendance?employee=${encodeURIComponent(type)}&month=${yearMonth}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          const records: AttendanceRecord[] = data.records;
+          const present = records.filter((r) => r.status === 'present').length;
+          const absent = records.filter((r) => r.status === 'absent').length;
+          setAttendanceData({
+            present,
+            absent,
+            total: present + absent,
+          });
+        } else {
+          console.error('Failed to fetch attendance:', data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching attendance:', error);
+      }
+    };
+
+    fetchAttendance();
+  }, [type, isEmployee]);
 
   // Calculate attendance percentage (whole number)
   const attendanceRate = attendanceData.total > 0
