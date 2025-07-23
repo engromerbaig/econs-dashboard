@@ -39,9 +39,13 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
   const attendanceData = {
     present: 22,
     absent: 3,
-    leave: 2,
-    totalDays: 27,
+    total: 25,
   };
+
+  // Calculate attendance percentage (whole number)
+  const attendanceRate = attendanceData.total > 0
+    ? Math.round((attendanceData.present / attendanceData.total) * 100)
+    : 0;
 
   // Pie chart data
   const chartData = [
@@ -116,30 +120,35 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
       </div>
 
       {/* Employee Details */}
-      {isEmployee && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-          {/* Employee Picture */}
-          <div className="flex justify-center">
-            <Image
-              src="/man.webp"
-              alt={`${type} profile picture`}
-              width={200}
-              height={200}
-              className="rounded-full object-cover"
-            />
-          </div>
-          {/* Attendance Box */}
-          <div className="p-6 bg-gray-100 rounded shadow">
-            <h2 className="text-sm font-semibold mb-2">Attendance (This Month)</h2>
-            <div className="text-sm space-y-1">
-              <p>Present: {attendanceData.present} days</p>
-              <p>Absent: {attendanceData.absent} days</p>
-              <p>Leave: {attendanceData.leave} days</p>
-              <p>Total: {attendanceData.totalDays} days</p>
-            </div>
-          </div>
+     {isEmployee && (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+    {/* Employee Picture */}
+    <div className="flex justify-center">
+      <Image
+        src="/man.webp"
+        alt={`${type} profile picture`}
+        width={200}
+        height={200}
+        className="rounded-full object-cover"
+      />
+    </div>
+    {/* Attendance Box */}
+    <div className="flex items-center gap-4">
+      <div className="p-6 bg-gray-100 rounded shadow flex-1">
+        <h2 className="text-sm font-semibold mb-2">Attendance (This Month)</h2>
+        <div className="text-sm space-y-1">
+          <p>Total: {attendanceData.total} days</p>
+          <p>Present: {attendanceData.present} days</p>
+          <p>Absent: {attendanceData.absent} days</p>
         </div>
-      )}
+
+          <p className="text-2xl pt-4  xl:text-[40px] font-bold text-green-500">{attendanceRate}%</p>
+        <p className="text-xs text-gray-500">attendance</p>
+      </div>
+      
+    </div>
+  </div>
+)}
     </div>
   );
 }
