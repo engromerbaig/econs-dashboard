@@ -2,6 +2,7 @@ import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
 import { useState } from 'react';
 import { FaTrashAlt } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   transactions: Transaction[];
@@ -12,10 +13,10 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense' | 'personal'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [deletingBulkIds, setDeletingBulkIds] = useState<string[]>([]);
 
   const filtered = transactions.filter(tx => {
     if (activeType === 'all') return true;
@@ -58,9 +59,12 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     );
     if (!confirmed) return;
 
+    setDeletingBulkIds(selectedIds);
+    
     for (const id of selectedIds) {
       try {
         await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+        await new Promise(resolve => setTimeout(resolve, 200)); // Delay for staggered animation
         onDelete(id);
       } catch (err) {
         console.error('Failed to delete transaction ID:', id, err);
@@ -70,6 +74,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     setSelectedIds([]);
     setSelectAll(false);
     setBulkMode(false);
+    setDeletingBulkIds([]);
   };
 
   const handleDelete = async (transaction: Transaction) => {
@@ -175,66 +180,80 @@ export default function TransactionList({ transactions, onDelete }: Props) {
       ) : (
         <div className="max-h-[500px] overflow-y-auto pr-1">
           <ul className="space-y-2 text-sm">
-            {sorted.map((tx, index) => {
-              let transactionId: string;
-              try {
-                transactionId = getTransactionId(tx);
-              } catch (error) {
-                console.error('Transaction missing ID:', tx);
-                return null;
-              }
+            <AnimatePresence>
+              {sorted.map((tx, index) => {
+                let transactionId: string;
+                try {
+                  transactionId = getTransactionId(tx);
+                } catch (error) {
+                  console.error('Transaction missing ID:', tx);
+                  return null;
+                }
 
-              const isIncome = tx.type === 'income';
-              const color = isIncome ? 'text-green-600' : 'text-red-600';
-              const sign = isIncome ? '+' : '−';
-              const isDeleting = deletingId === transactionId;
+                const isIncome = tx.type === 'income';
+                const color = isIncome ? 'text-green-600' : 'text-red-600';
+                const sign = isIncome ? '+' : '−';
+                const isDeleting = deletingId === transactionId || deletingBulkIds.includes(transactionId);
 
-              return (
-                <li key={transactionId} className="border-b-2 pb-2">
-                  <div className="flex justify-between items-center font-semibold">
-                    <div className="flex items-center gap-2">
-                      {bulkMode && (
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(transactionId)}
-                          onChange={() => toggleSelect(transactionId)}
-                          className="accent-black"
-                        />
-                      )}
-                      <span>
-                        #{index + 1} • {tx.category}
-                      </span>
+                return (
+                  <motion.li
+                    key={transactionId}
+                    className="border-b-2 pb-2"
+                    initial={{ opacity: 1, x: 0 }}
+                    animate={{ opacity: isDeleting ? 0.3 : 1 }}
+                    exit={{
+                      opacity: 0,
+                      x: -200,
+                      transition: {
+                        duration: 0.3,
+                        delay: deletingBulkIds.includes(transactionId) ? index * 0.1 : 0,
+                      },
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex justify-between items-center font-semibold">
+                      <div className="flex items-center gap-2">
+                        {bulkMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(transactionId)}
+                            onChange={() => toggleSelect(transactionId)}
+                            className="accent-black"
+                            disabled={isDeleting}
+                          />
+                        )}
+                        <span>
+                          #{index + 1} • {tx.category}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={color}>
+                          {sign} {formatPKR(tx.amount)}
+                        </span>
+                        {!bulkMode && (
+                          <button
+                            onClick={() => handleDelete(tx)}
+                            disabled={isDeleting}
+                            className={`p-1 rounded hover:bg-red-100 transition-colors ${
+                              isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                            }`}
+                            title="Delete transaction"
+                          >
+                            <FaTrashAlt className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={color}>
-                        {sign} {formatPKR(tx.amount)}
-                      </span>
-                      {!bulkMode && (
-                        <button
-                          onClick={() => handleDelete(tx)}
-                          disabled={isDeleting}
-                          className={`p-1 rounded hover:bg-red-100 transition-colors ${
-                            isDeleting ? 'opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
-                          }`}
-                          title="Delete transaction"
-                        >
-                          <FaTrashAlt className="w-4 h-4" />
-                        </button>
-                      )}
+                    <div className="text-gray-600">
+                      {tx.type} • {tx.date}
                     </div>
-                  </div>
-                  <div className="text-gray-600">
-                    {tx.type} • {tx.date}
-                  </div>
-                  {tx.description && (
-                    <div className="text-gray-500 italic">{tx.description}</div>
-                  )}
-                  {isDeleting && (
-                    <div className="text-xs text-blue-600 mt-1">Deleting...</div>
-                  )}
-                </li>
-              );
-            })}
+                    {tx.description && (
+                      <div className="text-gray-500 italic">{tx.description}</div>
+                    )}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
           </ul>
         </div>
       )}
