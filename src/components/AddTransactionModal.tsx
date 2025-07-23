@@ -11,7 +11,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (tx: Transaction) => void;
-  onAddBatch: (transactions: Transaction[]) => void; // Add this new prop for batch operations
+  onAddBatch: (transactions: Transaction[]) => void;
   existingTransactions: Transaction[];
   selectedMonth: string;
   filterMode: 'month' | '3m' | '6m' | '1y' | '3y' | 'all';
@@ -21,7 +21,7 @@ export default function AddTransactionModal({
   isOpen,
   onClose,
   onAdd,
-  onAddBatch, // Use this for batch operations
+  onAddBatch,
   existingTransactions,
   selectedMonth,
   filterMode,
@@ -37,6 +37,10 @@ export default function AddTransactionModal({
   const [allowEditAmount, setAllowEditAmount] = useState(false);
   const [batchTransactions, setBatchTransactions] = useState<Transaction[]>([]);
   const [multipleAmounts, setMultipleAmounts] = useState<number[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
+
+  // Get current date for max attribute
+  const currentDate = new Date().toISOString().split('T')[0];
 
   // Initialize date with proper logic
   const [date, setDate] = useState(() => {
@@ -63,7 +67,14 @@ export default function AddTransactionModal({
     if (filterMode === 'month' && selectedMonth === currentMonth) {
       setDate(now.toISOString().slice(0, 10));
     } else if (filterMode === 'month') {
-      setDate(`${selectedMonth}-01`);
+      // Ensure the date is not in the future
+      const selectedDate = new Date(`${selectedMonth}-01`);
+      const today = new Date();
+      if (selectedDate > today) {
+        setDate(today.toISOString().slice(0, 10));
+      } else {
+        setDate(`${selectedMonth}-01`);
+      }
     } else {
       setDate(now.toISOString().slice(0, 10));
     }
@@ -176,7 +187,7 @@ export default function AddTransactionModal({
   const handleAddAllSalaries = () => {
     const unpaidEmployees = Object.keys(salaryMap).filter((emp) => !alreadyPaidEmployees.includes(emp));
     const newBatchTransactions = unpaidEmployees.map((emp, index) => ({
-      id: generateUniqueId() + index, // Ensure unique IDs
+      id: generateUniqueId() + index,
       type: 'expense' as TransactionType,
       date,
       amount: salaryMap[emp],
@@ -192,7 +203,7 @@ export default function AddTransactionModal({
       (exp) => !alreadyPaidFixedExpenses.includes(exp)
     );
     const newBatchTransactions = unpaidFixedExpenses.map((exp, index) => ({
-      id: generateUniqueId() + index, // Ensure unique IDs
+      id: generateUniqueId() + index,
       type: 'expense' as TransactionType,
       date,
       amount: fixedExpenseMap[exp],
@@ -259,13 +270,24 @@ export default function AddTransactionModal({
     setAllowEditAmount(false);
     setMultipleAmounts([]);
     setBatchTransactions([]);
+    setIsSubmitting(false); // Reset loading state
   };
 
   const handleSubmit = async () => {
+    setIsSubmitting(true); // Start loading
+
+    // Validate date is not in the future
+    if (new Date(date) > new Date()) {
+      alert('Cannot add transactions for future dates.');
+      setIsSubmitting(false); // Stop loading
+      return;
+    }
+
     if (!batchTransactions.length && !multipleAmounts.length) {
       // Single transaction submission
       if (!amount || !date || (!category && !customCategory)) {
         alert('Fill all required fields');
+        setIsSubmitting(false); // Stop loading
         return;
       }
 
@@ -276,6 +298,7 @@ export default function AddTransactionModal({
         } else if (isFixedExpense) {
           alert(`${fixedExpense} already recorded for ${monthName}.`);
         }
+        setIsSubmitting(false); // Stop loading
         return;
       }
 
@@ -309,6 +332,8 @@ export default function AddTransactionModal({
       } catch (err) {
         console.error('Submit error:', err);
         alert('Failed to submit transaction');
+      } finally {
+        setIsSubmitting(false); // Stop loading
       }
     } else if (multipleAmounts.length) {
       // Multiple amounts submission for Petrol or Al Azhar Prints
@@ -318,7 +343,7 @@ export default function AddTransactionModal({
         for (let i = 0; i < multipleAmounts.length; i++) {
           const amt = multipleAmounts[i];
           const newTransaction: Transaction = {
-            id: generateUniqueId() + i, // Ensure unique IDs
+            id: generateUniqueId() + i,
             type,
             date,
             amount: amt,
@@ -337,19 +362,21 @@ export default function AddTransactionModal({
 
           if (!res.ok) {
             alert(`Error adding transaction: ${data.message || 'Something went wrong'}`);
+            setIsSubmitting(false); // Stop loading
             return;
           }
           
           newTransactions.push(newTransaction);
         }
         
-        // Use batch callback to update all transactions at once
         onAddBatch(newTransactions);
         onClose();
         resetForm();
       } catch (err) {
         console.error('Multiple amounts submit error:', err);
         alert('Failed to submit transactions');
+      } finally {
+        setIsSubmitting(false); // Stop loading
       }
     } else {
       // Batch transaction submission
@@ -360,7 +387,7 @@ export default function AddTransactionModal({
           const tx = batchTransactions[i];
           const transactionWithUniqueId = { 
             ...tx, 
-            id: generateUniqueId() + i // Ensure unique IDs
+            id: generateUniqueId() + i
           };
           
           const res = await fetch('/api/transactions', {
@@ -373,19 +400,21 @@ export default function AddTransactionModal({
 
           if (!res.ok) {
             alert(`Error adding ${tx.employee || tx.fixedExpense}: ${data.message || 'Something went wrong'}`);
+            setIsSubmitting(false); // Stop loading
             return;
           }
           
           processedTransactions.push(transactionWithUniqueId);
         }
         
-        // Use batch callback to update all transactions at once
         onAddBatch(processedTransactions);
         onClose();
         resetForm();
       } catch (err) {
         console.error('Batch submit error:', err);
         alert('Failed to submit batch transactions');
+      } finally {
+        setIsSubmitting(false); // Stop loading
       }
     }
   };
@@ -511,12 +540,10 @@ export default function AddTransactionModal({
             </div>
           )}
 
-          {/* Display multiple amounts and total */}
           {(isPetrol || isAlAzhar) && multipleAmounts.length > 0 && (
             <div className="mb-2">
               <div className="text-sm font-semibold mb-1">Added Amounts:</div>
               <div className="text-lg font-bold text-gray-700">{formatPKR(totalAmount)}</div>
-              {/* <div className="text-xs text-gray-500">{amountBreakdown}</div> */}
               <div className="flex flex-wrap gap-1 mt-1">
                 {multipleAmounts.map((amt, index) => (
                   <span key={index} className="inline-flex items-center bg-gray-200 rounded px-2 py-1 text-xs">
@@ -533,14 +560,12 @@ export default function AddTransactionModal({
             </div>
           )}
 
-          {/* Display formatted amount */}
           {displayAmount && (
             <div className="mb-2 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded">
               {displayAmount}
             </div>
           )}
 
-          {/* Quick amount buttons */}
           <div className="flex gap-2 mb-3">
             <button
               type="button"
@@ -636,6 +661,7 @@ export default function AddTransactionModal({
             className="w-full mb-3 border px-3 py-2 rounded"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            max={currentDate}
           />
 
           {isMisc && (
@@ -658,12 +684,16 @@ export default function AddTransactionModal({
         </>
       )}
 
-      <button
-        onClick={handleSubmit}
-        className="w-full bg-black cursor-pointer text-white py-2 rounded"
-      >
-        {batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Add All' : 'Add'}
-      </button>
+  <button
+  onClick={handleSubmit}
+  className="w-full bg-black  text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+  disabled={isSubmitting}
+>
+  {isSubmitting && (
+    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+  )}
+  {isSubmitting ? 'Adding' : batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Add All' : 'Add'}
+</button>
     </Modal>
   );
 }

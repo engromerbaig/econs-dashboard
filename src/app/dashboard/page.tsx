@@ -9,21 +9,21 @@ import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { CiLogout } from "react-icons/ci";
-
-
-import { useRouter } from 'next/navigation'; // ✅ Add this
-
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const router = useRouter(); // ✅ Add this near useState calls
+  const router = useRouter();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<'month' | '3m' | '6m' | '1y' | '3y' | 'all'>('month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // Current month
   });
+
+  // Get current year-month for max attribute
+  const currentYearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -60,11 +60,10 @@ export default function DashboardPage() {
     );
   };
 
-
-const handleLogout = async () => {
-  await fetch('/api/logout', { method: 'POST' });
-  router.push('/');
-};
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/');
+  };
 
   const getDateXMonthsAgo = (months: number): string => {
     const d = new Date();
@@ -126,7 +125,7 @@ const handleLogout = async () => {
   const isIncrease = percentageChange >= 0 && prevMonthProfit !== 0;
 
   return (
-  <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white">
       {/* Top Navbar */}
       <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
         <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
@@ -203,6 +202,7 @@ const handleLogout = async () => {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
+              max={currentYearMonth} // Restrict to current month
               className="border px-3 py-1 rounded"
             />
           )}
@@ -243,8 +243,5 @@ const handleLogout = async () => {
         filterMode={filterMode}
       />
     </main>
-
-
-  
   );
 }
