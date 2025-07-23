@@ -3,6 +3,7 @@
 import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { FaTrashAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export default function TransactionList({ transactions, onDelete }: Props) {
-  const [activeType, setActiveType] = useState<'all' | 'income' | 'expense' | 'personal'>('all');
+  const router = useRouter();
+  const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
@@ -21,9 +23,8 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   const [selectAll, setSelectAll] = useState(false);
   const [deletingBulkIds, setDeletingBulkIds] = useState<string[]>([]);
 
-  const filtered = transactions.filter(tx => {
+  const filtered = transactions.filter((tx) => {
     if (activeType === 'all') return true;
-    if (activeType === 'personal') return tx.category.toLowerCase().includes('personal');
     return tx.type === activeType;
   });
 
@@ -70,7 +71,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                   selectedIds.map(async (id, index) => {
                     try {
                       await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-                      await new Promise(resolve => setTimeout(resolve, 200)); // Delay for staggered animation
+                      await new Promise((resolve) => setTimeout(resolve, 200)); // Delay for staggered animation
                       onDelete(id);
                     } catch (err) {
                       console.error('Failed to delete transaction ID:', id, err);
@@ -201,6 +202,19 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     );
   };
 
+  const handleTransactionClick = (tx: Transaction) => {
+    // Determine the navigation target based on transaction properties
+    let target: string;
+    if (tx.category === 'Salary' && tx.employee) {
+      target = tx.employee;
+    } else if (tx.category === 'Fixed' && tx.fixedExpense) {
+      target = tx.fixedExpense;
+    } else {
+      target = tx.category;
+    }
+    router.push(`/dashboard/${encodeURIComponent(target)}`);
+  };
+
   return (
     <div>
       <Toaster position="top-left" reverseOrder={false} />
@@ -295,7 +309,9 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                 return (
                   <motion.li
                     key={transactionId}
-                    className="border-b-2 pb-2"
+                    className={`border-b-2 pb-2 cursor-pointer hover:bg-gray-100 transition-colors ${
+                      isDeleting ? 'opacity-50' : ''
+                    }`}
                     initial={{ opacity: 1, x: 0 }}
                     animate={{ opacity: isDeleting ? 0.3 : 1 }}
                     exit={{
@@ -307,6 +323,16 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                       },
                     }}
                     transition={{ duration: 0.3 }}
+                    onClick={(e) => {
+                      // Prevent navigation when clicking checkbox or delete button
+                      if (
+                        (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+                        (e.target as HTMLElement).closest('button')
+                      ) {
+                        return;
+                      }
+                      handleTransactionClick(tx);
+                    }}
                   >
                     <div className="flex justify-between items-center font-semibold">
                       <div className="flex items-center gap-2">
@@ -321,6 +347,8 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                         )}
                         <span>
                           #{index + 1} • {tx.category}
+                          {tx.employee && ` • ${tx.employee}`}
+                          {tx.fixedExpense && ` • ${tx.fixedExpense}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
