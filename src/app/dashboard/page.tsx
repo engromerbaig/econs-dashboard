@@ -232,7 +232,7 @@ export default function DashboardPage() {
         <MonthlyNetProfitChart transactions={filtered} />
       </div>
 
-      {/* Modal */}
+      {/* Modal changes*/}
       <AddTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
