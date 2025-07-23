@@ -17,17 +17,28 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   const router = useRouter();
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [deletingBulkIds, setDeletingBulkIds] = useState<string[]>([]);
 
+  // Filter transactions by type and search query
   const filtered = transactions.filter((tx) => {
-    if (activeType === 'all') return true;
-    return tx.type === activeType;
+    if (activeType !== 'all' && tx.type !== activeType) return false;
+    if (!searchQuery) return true;
+
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      (tx.category && tx.category.toLowerCase().includes(searchLower)) ||
+      (tx.employee && tx.employee.toLowerCase().includes(searchLower)) ||
+      (tx.fixedExpense && tx.fixedExpense.toLowerCase().includes(searchLower)) ||
+      (tx.description && tx.description.toLowerCase().includes(searchLower))
+    );
   });
 
+  // Sort filtered transactions
   const sorted = [...filtered].sort((a, b) => {
     if (sort === 'newest') return b.date.localeCompare(a.date);
     if (sort === 'oldest') return a.date.localeCompare(b.date);
@@ -203,7 +214,6 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   };
 
   const handleTransactionClick = (tx: Transaction) => {
-    // Determine the navigation target based on transaction properties
     let target: string;
     if (tx.category === 'Salary' && tx.employee) {
       target = tx.employee;
@@ -249,8 +259,8 @@ export default function TransactionList({ transactions, onDelete }: Props) {
         ))}
       </div>
 
-      {/* Sort & Bulk Controls */}
-      <div className="mb-3 flex items-center gap-4">
+      {/* Sort, Search & Bulk Controls */}
+      <div className="mb-3 flex items-center gap-4 flex-wrap">
         <select
           className="border px-2 py-1 rounded text-sm"
           value={sort}
@@ -261,6 +271,14 @@ export default function TransactionList({ transactions, onDelete }: Props) {
           <option value="highest">Sort by Highest Amount</option>
           <option value="lowest">Sort by Lowest Amount</option>
         </select>
+
+        <input
+          type="text"
+          placeholder="Search transactions..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border px-3 py-1 rounded text-sm w-full sm:w-64"
+        />
 
         {bulkMode && sorted.length > 0 && (
           <>
