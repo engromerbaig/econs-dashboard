@@ -47,6 +47,12 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
     ? Math.round((attendanceData.present / attendanceData.total) * 100)
     : 0;
 
+  // Dynamic employee image path
+  const getEmployeeImage = (employeeName: string) => {
+    const normalizedName = employeeName.toLowerCase().replace(/\s+/g, '-');
+    return `/images/${normalizedName}.webp`;
+  };
+
   // Pie chart data
   const chartData = [
     { name: 'Income', value: income },
@@ -120,35 +126,34 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
       </div>
 
       {/* Employee Details */}
-     {isEmployee && (
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-    {/* Employee Picture */}
-    <div className="flex justify-center">
-      <Image
-        src="/man.webp"
-        alt={`${type} profile picture`}
-        width={200}
-        height={200}
-        className="rounded-full object-cover"
-      />
-    </div>
-    {/* Attendance Box */}
-    <div className="flex items-center gap-4">
-      <div className="p-6 bg-gray-100 rounded shadow flex-1">
-        <h2 className="text-sm font-semibold mb-2">Attendance (This Month)</h2>
-        <div className="text-sm space-y-1">
-          <p>Total: {attendanceData.total} days</p>
-          <p>Present: {attendanceData.present} days</p>
-          <p>Absent: {attendanceData.absent} days</p>
+      {isEmployee && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+          {/* Employee Picture */}
+          <div className="flex justify-center">
+            <Image
+              src={getEmployeeImage(type)}
+              alt={`${type} profile picture`}
+              width={200}
+              height={200}
+              className="rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = '/images/default.webp';
+              }}
+            />
+          </div>
+          {/* Attendance Box */}
+          <div className="p-6 bg-gray-100 rounded shadow">
+            <h2 className="text-sm font-semibold mb-2">Attendance (This Month)</h2>
+            <div className="text-sm space-y-1">
+              <p>Total: {attendanceData.total} days</p>
+              <p>Present: {attendanceData.present} days</p>
+              <p>Absent: {attendanceData.absent} days</p>
+              <p className="text-2xl pt-4 xl:text-[40px] font-bold text-green-500">{attendanceRate}%</p>
+              <p className="text-xs text-gray-500">attendance</p>
+            </div>
+          </div>
         </div>
-
-          <p className="text-2xl pt-4  xl:text-[40px] font-bold text-green-500">{attendanceRate}%</p>
-        <p className="text-xs text-gray-500">attendance</p>
-      </div>
-      
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }
