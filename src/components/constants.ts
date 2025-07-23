@@ -12,7 +12,7 @@ export const incomeCategories = [
   'Misc',
 ];
 
-export const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Al Azhar Prints', "Office IT", 'Fixed', 'Misc'];
+export const expenseCategories = ['Utilities', 'Salary', 'Petrol', 'Al Azhar Prints', 'Talha HVAC', "Office IT", 'Fixed', 'Misc'];
 
 export const salaryMap: Record<string, number> = {
   'Ameer Hamza': 39000,
