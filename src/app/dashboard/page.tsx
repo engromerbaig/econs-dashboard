@@ -7,7 +7,6 @@ import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import EmployeesModal from '@/components/EmployeesModal';
-import AttendanceMarker from '@/components/AttendanceMarker';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { CiLogout } from 'react-icons/ci';
@@ -150,6 +149,12 @@ export default function DashboardPage() {
             Employees
           </button>
           <button
+            onClick={() => router.push('/attendance')}
+            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
+          >
+            Mark Attendance
+          </button>
+          <button
             onClick={handleLogout}
             className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
           >
@@ -289,9 +294,6 @@ export default function DashboardPage() {
             ⬇️ Export CSV
           </button>
         </div>
-
-        {/* Attendance Marker */}
-        <AttendanceMarker />
 
         {/* Transactions and Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
