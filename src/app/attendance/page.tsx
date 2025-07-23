@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { FaCheck, FaTimes } from 'react-icons/fa';
 import { CiLogout } from 'react-icons/ci';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface AttendanceRecord {
   employee: string;
@@ -22,9 +24,10 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState<{ [employee: string]: '' | 'present' | 'absent' }>(
     Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {})
   );
+  const [remainingEmployees, setRemainingEmployees] = useState<string[]>(Object.keys(salaryMap));
   const [isWorkingDay, setIsWorkingDay] = useState(true);
   const [message, setMessage] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [nextWorkingDay, setNextWorkingDay] = useState<string>('');
 
   // Check if selected date is a working day
   const isWorkingDayCheck = (dateStr: string) => {
@@ -41,62 +44,62 @@ export default function AttendancePage() {
     return weeks % 2 === 0; // Even weeks from July 26 are open
   };
 
-  useEffect(() => {
-    setIsWorkingDay(isWorkingDayCheck(selectedDate));
-    // Reset attendance state when date changes
-    setAttendance(Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {}));
-    setMessage('');
-    setIsSubmitted(false);
-  }, [selectedDate]);
-
-  const handleAttendanceChange = (employee: string, status: 'present' | 'absent') => {
-    setAttendance(prev => ({ ...prev, [employee]: status }));
+  // Calculate next working day
+  const getNextWorkingDay = (currentDate: string) => {
+    let nextDate = new Date(currentDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    while (!isWorkingDayCheck(nextDate.toISOString().split('T')[0])) {
+      nextDate.setDate(nextDate.getDate() + 1);
+    }
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const formattedDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+    return `Next working day: ${days[nextDate.getDay()]}, ${formattedDate}`;
   };
 
-  const handleSubmit = async () => {
-    const records: AttendanceRecord[] = Object.entries(attendance)
-      .filter(([_, status]) => status === 'present' || status === 'absent')
-      .map(([employee, status]) => ({
-        employee,
-        date: selectedDate,
-        status: status as 'present' | 'absent',
-      }));
+  useEffect(() => {
+    setIsWorkingDay(isWorkingDayCheck(selectedDate));
+    // Reset state when date changes
+    setAttendance(Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {}));
+    setRemainingEmployees(Object.keys(salaryMap));
+    setMessage('');
+    setNextWorkingDay(getNextWorkingDay(selectedDate));
+  }, [selectedDate]);
 
-    if (records.length === 0) {
-      setMessage('Please mark attendance for at least one employee.');
-      return;
-    }
+  const handleAttendanceChange = async (employee: string, status: 'present' | 'absent') => {
+    const record: AttendanceRecord = { employee, date: selectedDate, status };
 
     try {
       const res = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records }),
+        body: JSON.stringify({ records: [record] }),
       });
 
       let data;
       try {
         data = await res.json();
       } catch (jsonError) {
-        setMessage('Error: Invalid response from server. Please try again.');
+        toast.error(`Failed to mark attendance for ${employee}: Invalid response from server`);
         console.error('JSON parse error:', jsonError);
         return;
       }
 
       if (res.ok && data.status === 'success') {
-        setMessage(`Attendance saved successfully! (${data.insertedCount} records)`);
-        setIsSubmitted(true);
-        // Reset attendance state
-        setAttendance(Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {}));
+        toast.success(`Attendance marked for ${employee}`);
+        // Remove employee from UI
+        setRemainingEmployees(prev => prev.filter(emp => emp !== employee));
+        // Update attendance state
+        setAttendance(prev => ({ ...prev, [employee]: status }));
       } else {
-        setMessage(`Error: ${data.detail || data.message || 'Failed to save attendance.'}`);
+        toast.error(`Failed to mark attendance for ${employee}: ${data.detail || data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      setMessage('Error: Network issue or server is unavailable.');
-      console.error('Error in handleSubmit:', error);
+      toast.error(`Failed to mark attendance for ${employee}: Network issue`);
+      console.error('e in handleAttendanceChange:', error);
     }
   };
 
+  // Dynamic employee image path
   const getEmployeeImage = (employeeName: string) => {
     const normalizedName = employeeName.toLowerCase().replace(/\s+/g, '-');
     return `/images/${normalizedName}.webp`;
@@ -128,9 +131,11 @@ export default function AttendancePage() {
       </div>
 
       <div className="p-6">
-        {isSubmitted ? (
+        <Toaster position="top-right" />
+        {remainingEmployees.length === 0 ? (
           <div className="text-center text-lg font-semibold text-green-500">
             All attendances marked
+            <p className="text-sm text-gray-500 mt-2">{nextWorkingDay}</p>
           </div>
         ) : (
           <>
@@ -146,12 +151,15 @@ export default function AttendancePage() {
               />
             </div>
             {isWorkingDay ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                  {Object.keys(salaryMap).map((employee) => (
-                    <div
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <AnimatePresence>
+                  {remainingEmployees.map((employee) => (
+                    <motion.div
                       key={employee}
                       className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100"
+                      initial={{ x: 0, opacity: 1 }}
+                      exit={{ x: -100, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
                       <Image
                         src={getEmployeeImage(employee)}
@@ -162,6 +170,7 @@ export default function AttendancePage() {
                         onError={(e) => {
                           e.currentTarget.src = '/images/default.webp';
                         }}
+                        unoptimized
                       />
                       <div className="flex-1">
                         <span className="font-semibold">{employee}</span>
@@ -170,8 +179,8 @@ export default function AttendancePage() {
                             onClick={() => handleAttendanceChange(employee, 'present')}
                             className={`px-3 py-1 rounded ${
                               attendance[employee] === 'present'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gray-200 text-black'
+                                ? 'bg-green-300 text-white hover:bg-green-400'
+                                : 'bg-gray-200 text-black hover:bg-green-400'
                             }`}
                           >
                             <FaCheck className="inline mr-1" /> Present
@@ -180,31 +189,25 @@ export default function AttendancePage() {
                             onClick={() => handleAttendanceChange(employee, 'absent')}
                             className={`px-3 py-1 rounded ${
                               attendance[employee] === 'absent'
-                                ? 'bg-red-500 text-white'
-                                : 'bg-gray-200 text-black'
+                                ? 'bg-red-300 text-white hover:bg-red-400'
+                                : 'bg-gray-200 text-black hover:bg-red-400'
                             }`}
                           >
                             <FaTimes className="inline mr-1" /> Absent
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
-                <button
-                  onClick={handleSubmit}
-                  className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
-                >
-                  Save Attendance
-                </button>
-                {message && (
-                  <p className={`mt-2 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                    {message}
-                  </p>
-                )}
-              </>
+                </AnimatePresence>
+              </div>
             ) : (
               <p className="text-sm text-gray-500">Selected date is not a working day.</p>
+            )}
+            {message && (
+              <p className={`mt-2 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                {message}
+              </p>
             )}
           </>
         )}
