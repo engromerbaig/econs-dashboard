@@ -8,7 +8,8 @@ import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { CiLogout } from "react-icons/ci";
+
 
 import { useRouter } from 'next/navigation'; // ✅ Add this
 
@@ -133,6 +134,7 @@ const handleLogout = async () => {
           onClick={handleLogout}
           className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
         >
+          <CiLogout className="inline mr-2" />
           Logout
         </button>
       </div>
