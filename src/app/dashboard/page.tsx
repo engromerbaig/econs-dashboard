@@ -6,9 +6,10 @@ import { Transaction } from '@/components/types';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
+import EmployeesModal from '@/components/EmployeesModal';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
-import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { CiLogout } from "react-icons/ci";
+import { FaArrowUp, FaArrowDown, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { CiLogout } from 'react-icons/ci';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
@@ -16,13 +17,20 @@ export default function DashboardPage() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<'month' | '3m' | '6m' | '1y' | '3y' | 'all'>('month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // Current month
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [hiddenBoxes, setHiddenBoxes] = useState({
+    income: false,
+    expense: false,
+    profit: false,
+    salary: false,
+    profitPerMonth: false,
   });
 
-  // Get current year-month for max attribute
   const currentYearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
   useEffect(() => {
@@ -63,6 +71,10 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
     router.push('/');
+  };
+
+  const toggleVisibility = (box: keyof typeof hiddenBoxes) => {
+    setHiddenBoxes(prev => ({ ...prev, [box]: !prev[box] }));
   };
 
   const getDateXMonthsAgo = (months: number): string => {
@@ -129,29 +141,62 @@ export default function DashboardPage() {
       {/* Top Navbar */}
       <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
         <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-        >
-          <CiLogout className="inline mr-2" />
-          Logout
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsEmployeesModalOpen(true)}
+            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
+          >
+            Employees
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
+          >
+            <CiLogout className="inline mr-2" />
+            Logout
+          </button>
+        </div>
       </div>
+
+      {/* Employees Modal */}
+      <EmployeesModal
+        isOpen={isEmployeesModalOpen}
+        onClose={() => setIsEmployeesModalOpen(false)}
+        router={router}
+      />
 
       <div className="p-6">
         {/* Summary Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
-          <div className="p-10 bg-green-100 rounded shadow">
+          <div className="p-10 bg-green-100 rounded shadow relative">
             <h2 className="text-sm font-semibold">Income</h2>
-            <p className="text-2xl font-bold">PKR {totalIncome.toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">
+              PKR {hiddenBoxes.income ? '***' : totalIncome.toLocaleString('en-IN')}
+            </p>
+            <button
+              onClick={() => toggleVisibility('income')}
+              className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              {hiddenBoxes.income ? <FaEyeSlash /> : <FaEye />}
+            </button>
           </div>
-          <div className="p-10 bg-red-100 rounded shadow">
+          <div className="p-10 bg-red-100 rounded shadow relative">
             <h2 className="text-sm font-semibold">Expense</h2>
-            <p className="text-2xl font-bold">PKR {totalExpense.toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">
+              PKR {hiddenBoxes.expense ? '***' : totalExpense.toLocaleString('en-IN')}
+            </p>
+            <button
+              onClick={() => toggleVisibility('expense')}
+              className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              {hiddenBoxes.expense ? <FaEyeSlash /> : <FaEye />}
+            </button>
           </div>
-          <div className="p-10 bg-blue-100 rounded shadow">
+          <div className="p-10 bg-blue-100 rounded shadow relative">
             <h2 className="text-sm font-semibold">Profit</h2>
-            <p className="text-2xl font-bold">PKR {(totalIncome - totalExpense).toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">
+              PKR {hiddenBoxes.profit ? '***' : (totalIncome - totalExpense).toLocaleString('en-IN')}
+            </p>
             {filterMode === 'month' && (
               <p className="text-sm flex items-center gap-1 mt-2">
                 {changeText.includes('No') || changeText.includes('started') ? (
@@ -170,14 +215,36 @@ export default function DashboardPage() {
                 )}
               </p>
             )}
+            <button
+              onClick={() => toggleVisibility('profit')}
+              className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              {hiddenBoxes.profit ? <FaEyeSlash /> : <FaEye />}
+            </button>
           </div>
-          <div className="p-10 bg-indigo-100 rounded shadow">
+          <div className="p-10 bg-indigo-100 rounded shadow relative">
             <h2 className="text-sm font-semibold">Salary Total</h2>
-            <p className="text-2xl font-bold">PKR {salaryTotal.toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">
+              PKR {hiddenBoxes.salary ? '***' : salaryTotal.toLocaleString('en-IN')}
+            </p>
+            <button
+              onClick={() => toggleVisibility('salary')}
+              className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              {hiddenBoxes.salary ? <FaEyeSlash /> : <FaEye />}
+            </button>
           </div>
-          <div className="p-10 bg-purple-100 rounded shadow">
+          <div className="p-10 bg-purple-100 rounded shadow relative">
             <h2 className="text-sm font-semibold">Profit/Month</h2>
-            <p className="text-2xl font-bold">PKR {profitPerMonth.toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold">
+              PKR {hiddenBoxes.profitPerMonth ? '***' : profitPerMonth.toLocaleString('en-IN')}
+            </p>
+            <button
+              onClick={() => toggleVisibility('profitPerMonth')}
+              className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              {hiddenBoxes.profitPerMonth ? <FaEyeSlash /> : <FaEye />}
+            </button>
           </div>
         </div>
 
@@ -202,7 +269,7 @@ export default function DashboardPage() {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              max={currentYearMonth} // Restrict to current month
+              max={currentYearMonth}
               className="border px-3 py-1 rounded"
             />
           )}
@@ -232,7 +299,6 @@ export default function DashboardPage() {
         <MonthlyNetProfitChart transactions={filtered} />
       </div>
 
-      {/* Modal changes*/}
       <AddTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
