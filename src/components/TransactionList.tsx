@@ -1,8 +1,11 @@
+'use client';
+
 import { Transaction } from './types';
 import { formatPKR } from '@/lib/format';
 import { useState } from 'react';
 import { FaTrashAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Props {
   transactions: Transaction[];
@@ -53,60 +56,154 @@ export default function TransactionList({ transactions, onDelete }: Props) {
     setSelectAll(!selectAll);
   };
 
-  const handleBulkDelete = async () => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedIds.length} selected transactions?`
-    );
-    if (!confirmed) return;
+  const handleBulkDelete = () => {
+    toast(
+      (t) => (
+        <div>
+          <p>Are you sure you want to delete {selectedIds.length} selected transactions?</p>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                setDeletingBulkIds(selectedIds);
+                const deletePromise = Promise.all(
+                  selectedIds.map(async (id, index) => {
+                    try {
+                      await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+                      await new Promise(resolve => setTimeout(resolve, 200)); // Delay for staggered animation
+                      onDelete(id);
+                    } catch (err) {
+                      console.error('Failed to delete transaction ID:', id, err);
+                      throw err;
+                    }
+                  })
+                ).then(() => {
+                  setSelectedIds([]);
+                  setSelectAll(false);
+                  setBulkMode(false);
+                  setDeletingBulkIds([]);
+                });
 
-    setDeletingBulkIds(selectedIds);
-    
-    for (const id of selectedIds) {
-      try {
-        await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-        await new Promise(resolve => setTimeout(resolve, 200)); // Delay for staggered animation
-        onDelete(id);
-      } catch (err) {
-        console.error('Failed to delete transaction ID:', id, err);
+                toast.promise(
+                  deletePromise,
+                  {
+                    loading: 'Deleting transactions...',
+                    success: 'Transactions deleted successfully!',
+                    error: 'Failed to delete transactions. Please try again.',
+                  },
+                  {
+                    style: {
+                      background: '#f0fdf4',
+                      color: '#16a34a',
+                      border: '1px solid #16a34a',
+                    },
+                  }
+                );
+              }}
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              Yes, Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: 'top-center',
+        style: {
+          background: '#fef2f2',
+          color: '#dc2626',
+          border: '1px solid #dc2626',
+        },
       }
-    }
-
-    setSelectedIds([]);
-    setSelectAll(false);
-    setBulkMode(false);
-    setDeletingBulkIds([]);
+    );
   };
 
   const handleDelete = async (transaction: Transaction) => {
-    const confirmed = window.confirm('Are you sure you want to delete this transaction? This action cannot be undone.');
-    if (!confirmed) return;
+    const transactionId = getTransactionId(transaction);
 
-    try {
-      const transactionId = getTransactionId(transaction);
-      setDeletingId(transactionId);
+    toast(
+      (t) => (
+        <div>
+          <p>Are you sure you want to delete this transaction? This action cannot be undone.</p>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                setDeletingId(transactionId);
+                const deletePromise = new Promise<void>((resolve, reject) => {
+                  fetch(`/api/transactions/${transactionId}`, {
+                    method: 'DELETE',
+                  })
+                    .then(async (response) => {
+                      const data = await response.json();
+                      if (data.status === 'success') {
+                        onDelete(transactionId);
+                        resolve();
+                      } else {
+                        console.error('Delete failed:', data.message);
+                        reject(new Error(data.message));
+                      }
+                    })
+                    .catch((error) => {
+                      console.error('Delete error:', error);
+                      reject(error);
+                    })
+                    .finally(() => {
+                      setDeletingId(null);
+                    });
+                });
 
-      const response = await fetch(`/api/transactions/${transactionId}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
-      if (data.status === 'success') {
-        onDelete(transactionId);
-      } else {
-        alert('Failed to delete transaction: ' + data.message);
-        console.error('Delete failed:', data.message);
+                toast.promise(
+                  deletePromise,
+                  {
+                    loading: 'Deleting transaction...',
+                    success: 'Transaction deleted successfully!',
+                    error: (err) => `Failed to delete transaction: ${err.message || 'Please try again.'}`,
+                  },
+                  {
+                    style: {
+                      background: '#f0fdf4',
+                      color: '#16a34a',
+                      border: '1px solid #16a34a',
+                    },
+                  }
+                );
+              }}
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              Yes, Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: 'top-center',
+        style: {
+          background: '#fef2f2',
+          color: '#dc2626',
+          border: '1px solid #dc2626',
+        },
       }
-    } catch (error) {
-      console.error('Delete error:', error);
-      alert('Failed to delete transaction. Please try again.');
-    } finally {
-      setDeletingId(null);
-    }
+    );
   };
 
   return (
     <div>
+      <Toaster position="top-left" reverseOrder={false} />
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-bold">Transactions</h2>
         <button
