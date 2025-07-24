@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { FaCheck, FaTimes, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 interface AttendanceRecord {
   employee: string;
@@ -14,6 +15,7 @@ interface AttendanceRecord {
 }
 
 export default function AttendancePage() {
+  const router = useRouter(); // Initialize router
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -48,37 +50,36 @@ export default function AttendancePage() {
   };
 
   // Determine if the selected date is the last working day of the week
-// Determine if the selected date is the last working day of the week
-const isLastWorkingDayOfWeek = (dateStr: string) => {
-  const date = new Date(dateStr);
-  date.setHours(0, 0, 0, 0); // Normalize to start of day
-  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  
-  // Find Saturday of the same week
-  const saturday = new Date(date);
-  saturday.setDate(date.getDate() + (6 - day)); // Move to Saturday of current week
-  const saturdayDateStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`;
-  
-  // Check if Saturday is a working day (using the existing isWorkingDayCheck function)
-  const isSaturdayOpen = isWorkingDayCheck(saturdayDateStr);
-  
-  console.log(`Date: ${dateStr}, Day: ${day}, Saturday (${saturdayDateStr}) Open: ${isSaturdayOpen}`); // Debug log
-  
-  if (isSaturdayOpen && day === 6) {
-    // If Saturday is open and current date is Saturday, it's the last working day
-    console.log(`${dateStr} is Saturday and last working day (even week)`);
-    return true;
-  }
-  
-  if (!isSaturdayOpen && day === 5) {
-    // If Saturday is closed and current date is Friday, it's the last working day
-    console.log(`${dateStr} is Friday and last working day (odd week - Saturday closed)`);
-    return true;
-  }
-  
-  console.log(`${dateStr} is not the last working day`);
-  return false;
-};
+  const isLastWorkingDayOfWeek = (dateStr: string) => {
+    const date = new Date(dateStr);
+    date.setHours(0, 0, 0, 0); // Normalize to start of day
+    const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Find Saturday of the same week
+    const saturday = new Date(date);
+    saturday.setDate(date.getDate() + (6 - day)); // Move to Saturday of current week
+    const saturdayDateStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`;
+    
+    // Check if Saturday is a working day (using the existing isWorkingDayCheck function)
+    const isSaturdayOpen = isWorkingDayCheck(saturdayDateStr);
+    
+    console.log(`Date: ${dateStr}, Day: ${day}, Saturday (${saturdayDateStr}) Open: ${isSaturdayOpen}`); // Debug log
+    
+    if (isSaturdayOpen && day === 6) {
+      // If Saturday is open and current date is Saturday, it's the last working day
+      console.log(`${dateStr} is Saturday and last working day (even week)`);
+      return true;
+    }
+    
+    if (!isSaturdayOpen && day === 5) {
+      // If Saturday is closed and current date is Friday, it's the last working day
+      console.log(`${dateStr} is Friday and last working day (odd week - Saturday closed)`);
+      return true;
+    }
+    
+    console.log(`${dateStr} is not the last working day`);
+    return false;
+  };
 
   // Calculate next working day
   const getNextWorkingDay = (currentDate: string) => {
@@ -347,10 +348,11 @@ const isLastWorkingDayOfWeek = (dateStr: string) => {
                     {remainingEmployees.map((employee) => (
                       <motion.div
                         key={employee}
-                        className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100"
+                        className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100 cursor-pointer" // Added cursor-pointer
                         initial={{ x: 0, opacity: 1 }}
                         exit={{ x: -100, opacity: 0 }}
                         transition={{ duration: 0.3 }}
+                        onClick={() => router.push(`/dashboard/${encodeURIComponent(employee)}`)} // Added click event
                       >
                         <Image
                           src={getEmployeeImage(employee)}
@@ -367,8 +369,11 @@ const isLastWorkingDayOfWeek = (dateStr: string) => {
                           <span className="font-semibold">{employee}</span>
                           <div className="flex gap-2 mt-2">
                             <button
-                              onClick={() => handleAttendanceChange(employee, 'present')}
-                              className={`px-3 py-1  cursor-pointer rounded ${
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent card click from triggering navigation
+                                handleAttendanceChange(employee, 'present');
+                              }}
+                              className={`px-3 py-1 cursor-pointer rounded ${
                                 attendance[employee] === 'present'
                                   ? 'bg-green-300 text-white hover:bg-green-400'
                                   : 'bg-green-200 text-black hover:bg-green-400'
@@ -377,8 +382,11 @@ const isLastWorkingDayOfWeek = (dateStr: string) => {
                               <FaCheck className="inline mr-1" /> Present
                             </button>
                             <button
-                              onClick={() => handleAttendanceChange(employee, 'absent')}
-                              className={`px-3 py-1 cursor-pointer  rounded ${
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent card click from triggering navigation
+                                handleAttendanceChange(employee, 'absent');
+                              }}
+                              className={`px-3 py-1 cursor-pointer rounded ${
                                 attendance[employee] === 'absent'
                                   ? 'bg-red-300 text-white hover:bg-red-400'
                                   : 'bg-red-200 text-black hover:bg-red-400'
