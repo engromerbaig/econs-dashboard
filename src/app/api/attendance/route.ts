@@ -19,35 +19,55 @@ async function getDb(): Promise<Db> {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date'); // Expected format: YYYY-MM-DD
     const employee = searchParams.get('employee');
     const month = searchParams.get('month'); // Expected format: YYYY-MM
 
-    if (!employee || !month) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1',
-          title: 'Missing parameters',
-          detail: 'Both employee and month query parameters are required.',
-        },
-        { status: 400 }
-      );
+    // Handle requests for a specific date
+    if (date) {
+      const db = await getDb();
+      const records = await db
+        .collection('attendance')
+        .find({ date })
+        .toArray();
+
+      return NextResponse.json({
+        status: 'success',
+        records: records.map((record) => ({
+          employee: record.employee,
+          date: record.date,
+          status: record.status,
+        })),
+      });
     }
 
-    const db = await getDb();
-    const records = await db
-      .collection('attendance')
-      .find({ employee, date: { $regex: `^${month}` } })
-      .toArray();
+    // Handle requests for an employee and month (existing functionality)
+    if (employee && month) {
+      const db = await getDb();
+      const records = await db
+        .collection('attendance')
+        .find({ employee, date: { $regex: `^${month}` } })
+        .toArray();
 
-    return NextResponse.json({
-      status: 'success',
-      records: records.map((record) => ({
-        employee: record.employee,
-        date: record.date,
-        status: record.status,
-      })),
-    });
+      return NextResponse.json({
+        status: 'success',
+        records: records.map((record) => ({
+          employee: record.employee,
+          date: record.date,
+          status: record.status,
+        })),
+      });
+    }
+
+    return NextResponse.json(
+      {
+        status: 'error',
+        type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1',
+        title: 'Missing parameters',
+        detail: 'Either date or both employee and month query parameters are required.',
+      },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('Error in GET /api/attendance:', error);
     return NextResponse.json(

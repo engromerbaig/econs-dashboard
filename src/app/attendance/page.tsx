@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { salaryMap } from '@/components/constants';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { FaCheck, FaTimes } from 'react-icons/fa';
-import { CiLogout } from 'react-icons/ci';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -16,18 +14,15 @@ interface AttendanceRecord {
 }
 
 export default function AttendancePage() {
-  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
-  const [attendance, setAttendance] = useState<{ [employee: string]: '' | 'present' | 'absent' }>(
-    Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {})
-  );
-  const [remainingEmployees, setRemainingEmployees] = useState<string[]>(Object.keys(salaryMap));
+  const [attendance, setAttendance] = useState<{ [employee: string]: '' | 'present' | 'absent' }>({});
+  const [remainingEmployees, setRemainingEmployees] = useState<string[]>([]);
   const [isWorkingDay, setIsWorkingDay] = useState(true);
-  const [message, setMessage] = useState('');
   const [nextWorkingDay, setNextWorkingDay] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check if selected date is a working day
   const isWorkingDayCheck = (dateStr: string) => {
@@ -56,13 +51,54 @@ export default function AttendancePage() {
     return `Next working day: ${days[nextDate.getDay()]}, ${formattedDate}`;
   };
 
+  // Fetch attendance records for the selected date
   useEffect(() => {
+    const fetchAttendance = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/attendance?date=${selectedDate}`);
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonError) {
+          toast.error('Failed to fetch attendance: Invalid response from server');
+          console.error('JSON parse error:', jsonError);
+          return;
+        }
+
+        if (res.ok && data.status === 'success') {
+          const markedEmployees = data.records.map((record: AttendanceRecord) => record.employee);
+          const remaining = Object.keys(salaryMap).filter(
+            (employee) => !markedEmployees.includes(employee)
+          );
+          setRemainingEmployees(remaining);
+          setAttendance(
+            Object.keys(salaryMap).reduce(
+              (acc, employee) => ({
+                ...acc,
+                [employee]: markedEmployees.includes(employee)
+                  ? data.records.find((r: AttendanceRecord) => r.employee === employee).status
+                  : '',
+              }),
+              {}
+            )
+          );
+        } else {
+          toast.error(`Failed to fetch attendance: ${data.detail || data.message || 'Unknown error'}`);
+          setRemainingEmployees(Object.keys(salaryMap)); // Fallback to all employees on error
+        }
+      } catch (error) {
+        toast.error('Failed to fetch attendance: Network issue');
+        console.error('Error fetching attendance:', error);
+        setRemainingEmployees(Object.keys(salaryMap)); // Fallback to all employees on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     setIsWorkingDay(isWorkingDayCheck(selectedDate));
-    // Reset state when date changes
-    setAttendance(Object.keys(salaryMap).reduce((acc, employee) => ({ ...acc, [employee]: '' }), {}));
-    setRemainingEmployees(Object.keys(salaryMap));
-    setMessage('');
     setNextWorkingDay(getNextWorkingDay(selectedDate));
+    fetchAttendance();
   }, [selectedDate]);
 
   const handleAttendanceChange = async (employee: string, status: 'present' | 'absent') => {
@@ -87,15 +123,15 @@ export default function AttendancePage() {
       if (res.ok && data.status === 'success') {
         toast.success(`Attendance marked for ${employee}`);
         // Remove employee from UI
-        setRemainingEmployees(prev => prev.filter(emp => emp !== employee));
+        setRemainingEmployees((prev) => prev.filter((emp) => emp !== employee));
         // Update attendance state
-        setAttendance(prev => ({ ...prev, [employee]: status }));
+        setAttendance((prev) => ({ ...prev, [employee]: status }));
       } else {
         toast.error(`Failed to mark attendance for ${employee}: ${data.detail || data.message || 'Unknown error'}`);
       }
     } catch (error) {
       toast.error(`Failed to mark attendance for ${employee}: Network issue`);
-      console.error('e in handleAttendanceChange:', error);
+      console.error('Error in handleAttendanceChange:', error);
     }
   };
 
@@ -107,11 +143,13 @@ export default function AttendancePage() {
 
   return (
     <main className="min-h-screen bg-white">
-     
-
       <div className="p-6">
         <Toaster position="top-right" />
-        {remainingEmployees.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center text-lg font-semibold text-gray-500">
+            Loading attendance...
+          </div>
+        ) : remainingEmployees.length === 0 ? (
           <div className="text-center text-lg font-semibold text-green-500">
             All attendances marked
             <p className="text-sm text-gray-500 mt-2">{nextWorkingDay}</p>
@@ -182,11 +220,6 @@ export default function AttendancePage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">Selected date is not a working day.</p>
-            )}
-            {message && (
-              <p className={`mt-2 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                {message}
-              </p>
             )}
           </>
         )}
