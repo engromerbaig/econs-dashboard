@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -112,18 +111,36 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
   // Dynamic employee image path
   const getEmployeeImage = (employeeName: string) => {
     const normalizedName = employeeName.toLowerCase().replace(/\s+/g, '-');
-    return `/images/${normalizedName}.webp`;
+    const imagePath = `/images/${normalizedName}.webp`;
+    console.log(`Generating image path for ${employeeName}: ${imagePath}`); // Debug log
+    return imagePath;
   };
 
-  // Pie chart data
-  const chartData = [
-    { name: 'Income', value: income },
-    { name: 'Expense', value: expense },
-  ].filter((entry) => entry.value > 0);
+  // Filter active employees based on today's date
+  const getActiveEmployees = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    return Object.keys(salaryMap).filter((employee) => {
+      if (employee === 'Lawyer' || employee === 'Cleaner') return false; // Exclude Lawyer and Cleaner
+      const departureDate = salaryMap[employee].departureDate;
+      if (!departureDate) return true; // Current employee
+      const departure = new Date(departureDate);
+      departure.setHours(0, 0, 0, 0); // Normalize to start of day
+      return departure >= today; // Include if departure is today or future
+    });
+  };
 
-  const COLORS = ['#34d399', '#f87171'];
+  // Check if type is a valid employee for image display
+  const isValidEmployeeForImage = isEmployee && getActiveEmployees().includes(type);
 
   if (showChartOnly) {
+    const chartData = [
+      { name: 'Income', value: income },
+      { name: 'Expense', value: expense },
+    ].filter((entry) => entry.value > 0);
+
+    const COLORS = ['#34d399', '#f87171'];
+
     return (
       <div className="w-full border-2 border-gray-200 rounded-lg p-6 bg-white shadow-md">
         <h2 className="text-lg font-bold mb-4">{type} Summary</h2>
@@ -192,16 +209,28 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
           {/* Employee Picture */}
           <div className="flex justify-center">
-            <Image
-              src={getEmployeeImage(type)}
-              alt={`${type} profile picture`}
-              width={200}
-              height={200}
-              className="rounded-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = '/images/default.webp';
-              }}
-            />
+            {isValidEmployeeForImage ? (
+              <Image
+                src={getEmployeeImage(type)}
+                alt={`${type} profile picture`}
+                width={200}
+                height={200}
+                className="rounded-full object-cover border-2"
+                onError={(e) => {
+                  console.log(`Image failed to load for ${type}, falling back to default`); // Debug log
+                  e.currentTarget.src = '/images/default.webp';
+                }}
+                unoptimized // Add to prevent optimization issues
+              />
+            ) : (
+              <Image
+                src="/images/default.webp"
+                alt="Default profile picture"
+                width={100}
+                height={100}
+                className="rounded-full object-cover border-2"
+              />
+            )}
           </div>
           {/* Attendance Box */}
           <div className="p-6 bg-gray-100 rounded shadow">
