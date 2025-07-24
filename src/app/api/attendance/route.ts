@@ -1,3 +1,4 @@
+
 import clientPromise from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import { MongoClient, Db } from 'mongodb';
@@ -41,12 +42,13 @@ export async function GET(request: Request) {
       });
     }
 
-    // Handle requests for an employee and month (existing functionality)
-    if (employee && month) {
+    // Handle requests for an employee (with or without month)
+    if (employee) {
       const db = await getDb();
+      const query = month ? { employee, date: { $regex: `^${month}` } } : { employee };
       const records = await db
         .collection('attendance')
-        .find({ employee, date: { $regex: `^${month}` } })
+        .find(query)
         .toArray();
 
       return NextResponse.json({
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
         status: 'error',
         type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1',
         title: 'Missing parameters',
-        detail: 'Either date or both employee and month query parameters are required.',
+        detail: 'Either date or employee query parameter is required.',
       },
       { status: 400 }
     );

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -42,33 +43,59 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
 
   const total = transactions.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0);
 
-  // Dynamic attendance data
+  // Attendance data state for both tabs
   const [attendanceData, setAttendanceData] = useState<{
-    present: number;
-    absent: number;
-    total: number;
-  }>({ present: 0, absent: 0, total: 0 });
+    currentMonth: { present: number; absent: number; total: number };
+    allTime: { present: number; absent: number; total: number };
+  }>({
+    currentMonth: { present: 0, absent: 0, total: 0 },
+    allTime: { present: 0, absent: 0, total: 0 },
+  });
+  const [activeTab, setActiveTab] = useState<'currentMonth' | 'allTime'>('currentMonth');
 
   useEffect(() => {
     const fetchAttendance = async () => {
       if (!isEmployee) return;
       try {
+        // Fetch current month attendance
         const now = new Date();
         const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const res = await fetch(`/api/attendance?employee=${encodeURIComponent(type)}&month=${yearMonth}`);
-        const data = await res.json();
-        if (data.status === 'success') {
-          const records: AttendanceRecord[] = data.records;
-          const present = records.filter((r) => r.status === 'present').length;
-          const absent = records.filter((r) => r.status === 'absent').length;
-          setAttendanceData({
-            present,
-            absent,
-            total: present + absent,
-          });
+        const currentMonthRes = await fetch(`/api/attendance?employee=${encodeURIComponent(type)}&month=${yearMonth}`);
+        const currentMonthData = await currentMonthRes.json();
+
+        // Fetch all-time attendance
+        const allTimeRes = await fetch(`/api/attendance?employee=${encodeURIComponent(type)}`);
+        const allTimeData = await allTimeRes.json();
+
+        let currentMonthStats = { present: 0, absent: 0, total: 0 };
+        let allTimeStats = { present: 0, absent: 0, total: 0 };
+
+        if (currentMonthRes.ok && currentMonthData.status === 'success') {
+          const records: AttendanceRecord[] = currentMonthData.records;
+          currentMonthStats = {
+            present: records.filter((r) => r.status === 'present').length,
+            absent: records.filter((r) => r.status === 'absent').length,
+            total: records.length,
+          };
         } else {
-          console.error('Failed to fetch attendance:', data.message);
+          console.error('Failed to fetch current month attendance:', currentMonthData.message);
         }
+
+        if (allTimeRes.ok && allTimeData.status === 'success') {
+          const records: AttendanceRecord[] = allTimeData.records;
+          allTimeStats = {
+            present: records.filter((r) => r.status === 'present').length,
+            absent: records.filter((r) => r.status === 'absent').length,
+            total: records.length,
+          };
+        } else {
+          console.error('Failed to fetch all-time attendance:', allTimeData.message);
+        }
+
+        setAttendanceData({
+          currentMonth: currentMonthStats,
+          allTime: allTimeStats,
+        });
       } catch (error) {
         console.error('Error fetching attendance:', error);
       }
@@ -78,8 +105,8 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
   }, [type, isEmployee]);
 
   // Calculate attendance percentage (whole number)
-  const attendanceRate = attendanceData.total > 0
-    ? Math.round((attendanceData.present / attendanceData.total) * 100)
+  const attendanceRate = attendanceData[activeTab].total > 0
+    ? Math.round((attendanceData[activeTab].present / attendanceData[activeTab].total) * 100)
     : 0;
 
   // Dynamic employee image path
@@ -178,12 +205,38 @@ export default function TypeSummary({ transactions, type, showChartOnly = false 
           </div>
           {/* Attendance Box */}
           <div className="p-6 bg-gray-100 rounded shadow">
-            <h2 className="text-sm font-semibold mb-2">Attendance (This Month)</h2>
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setActiveTab('currentMonth')}
+                className={`px-3 py-1 rounded ${
+                  activeTab === 'currentMonth' ? 'bg-black text-white' : 'bg-gray-200 text-black'
+                }`}
+              >
+                Current Month
+              </button>
+              <button
+                onClick={() => setActiveTab('allTime')}
+                className={`px-3 py-1 rounded ${
+                  activeTab === 'allTime' ? 'bg-black text-white' : 'bg-gray-200 text-black'
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+            <h2 className="text-sm font-semibold mb-2">
+              Attendance ({activeTab === 'currentMonth' ? 'This Month' : 'All Time'})
+            </h2>
             <div className="text-sm space-y-1">
-              <p>Total: {attendanceData.total} days</p>
-              <p>Present: {attendanceData.present} days</p>
-              <p>Absent: {attendanceData.absent} days</p>
-              <p className="text-2xl pt-4 xl:text-[40px] font-bold text-green-500">{attendanceRate}%</p>
+              <p>Total: {attendanceData[activeTab].total} days</p>
+              <p>Present: {attendanceData[activeTab].present} days</p>
+              <p>Absent: {attendanceData[activeTab].absent} days</p>
+              <p
+                className={`text-2xl pt-4 xl:text-[40px] font-bold ${
+                  attendanceRate < 50 ? 'text-red-500' : 'text-green-500'
+                }`}
+              >
+                {attendanceRate}%
+              </p>
               <p className="text-xs text-gray-500">attendance</p>
             </div>
           </div>
