@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { salaryMap } from '@/components/constants';
 import Image from 'next/image';
-import { FaCheck, FaTimes } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -23,6 +23,17 @@ export default function AttendancePage() {
   const [isWorkingDay, setIsWorkingDay] = useState(true);
   const [nextWorkingDay, setNextWorkingDay] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Format date as "Aug 7 2025, Monday"
+  const formatDisplayDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      weekday: 'long',
+    }).format(date);
+  };
 
   // Check if selected date is a working day
   const isWorkingDayCheck = (dateStr: string) => {
@@ -49,6 +60,67 @@ export default function AttendancePage() {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const formattedDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
     return `Next working day: ${days[nextDate.getDay()]}, ${formattedDate}`;
+  };
+
+  // Check if date is in the future
+  const isFutureDate = (dateStr: string) => {
+    const selected = new Date(dateStr);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Normalize to start of day
+    return selected > now;
+  };
+
+  // Navigate to previous or next day
+  const changeDate = (direction: 'prev' | 'next') => {
+    const currentDate = new Date(selectedDate);
+    currentDate.setDate(currentDate.getDate() + (direction === 'prev' ? -1 : 1));
+    const newDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+    setSelectedDate(newDate);
+  };
+
+  // Bulk mark attendance
+  const markAllAttendance = async (status: 'present' | 'absent') => {
+    const records: AttendanceRecord[] = remainingEmployees.map((employee) => ({
+      employee,
+      date: selectedDate,
+      status,
+    }));
+
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records }),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        toast.error(`Failed to mark bulk attendance: Invalid response from server`);
+        console.error('JSON parse error:', jsonError);
+        return;
+      }
+
+      if (res.ok && data.status === 'success') {
+        toast.success(`Marked all as ${status} (${data.insertedCount} records)`);
+        setRemainingEmployees([]); // Clear remaining employees
+        setAttendance(
+          Object.keys(salaryMap).reduce<{ [employee: string]: '' | 'present' | 'absent' }>(
+            (acc, employee) => ({
+              ...acc,
+              [employee]: remainingEmployees.includes(employee) ? status : acc[employee] || '',
+            }),
+            {}
+          )
+        );
+      } else {
+        toast.error(`Failed to mark bulk attendance: ${data.detail || data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      toast.error('Failed to mark bulk attendance: Network issue');
+      console.error('Error in markAllAttendance:', error);
+    }
   };
 
   // Fetch attendance records for the selected date
@@ -122,9 +194,7 @@ export default function AttendancePage() {
 
       if (res.ok && data.status === 'success') {
         toast.success(`Attendance marked for ${employee}`);
-        // Remove employee from UI
         setRemainingEmployees((prev) => prev.filter((emp) => emp !== employee));
-        // Update attendance state
         setAttendance((prev) => ({ ...prev, [employee]: status }));
       } else {
         toast.error(`Failed to mark attendance for ${employee}: ${data.detail || data.message || 'Unknown error'}`);
@@ -145,6 +215,39 @@ export default function AttendancePage() {
     <main className="min-h-screen bg-white">
       <div className="p-6">
         <Toaster position="top-right" />
+        <div className="mb-4 flex justify-between items-center">
+          <button
+            onClick={() => changeDate('prev')}
+            className="bg-black text-white px-3 py-1 rounded hover:bg-black/80 flex items-center"
+          >
+            <FaArrowLeft className="mr-2" /> Previous
+          </button>
+          <div className="flex flex-col items-center">
+            <div>
+              <label className="text-sm font-semibold mr-2">Select Date:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                min="2025-07-23"
+                max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+                className="border px-3 py-1 rounded"
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2">{formatDisplayDate(selectedDate)}</p>
+          </div>
+          <button
+            onClick={() => changeDate('next')}
+            disabled={isFutureDate(selectedDate)}
+            className={`px-3 py-1 rounded flex items-center ${
+              isFutureDate(selectedDate)
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-black text-white hover:bg-black/80'
+            }`}
+          >
+            Next <FaArrowRight className="ml-2" />
+          </button>
+        </div>
         {isLoading ? (
           <div className="text-center text-lg font-semibold text-gray-500">
             Loading attendance...
@@ -156,68 +259,73 @@ export default function AttendancePage() {
           </div>
         ) : (
           <>
-            <div className="mb-4">
-              <label className="text-sm font-semibold mr-2">Select Date:</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                min="2025-07-23"
-                max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
-                className="border px-3 py-1 rounded"
-              />
-            </div>
             {isWorkingDay ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <AnimatePresence>
-                  {remainingEmployees.map((employee) => (
-                    <motion.div
-                      key={employee}
-                      className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100"
-                      initial={{ x: 0, opacity: 1 }}
-                      exit={{ x: -100, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Image
-                        src={getEmployeeImage(employee)}
-                        alt={`${employee} profile picture`}
-                        width={50}
-                        height={50}
-                        className="rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/images/default.webp';
-                        }}
-                        unoptimized
-                      />
-                      <div className="flex-1">
-                        <span className="font-semibold">{employee}</span>
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={() => handleAttendanceChange(employee, 'present')}
-                            className={`px-3 py-1 rounded ${
-                              attendance[employee] === 'present'
-                                ? 'bg-green-300 text-white hover:bg-green-400'
-                                : 'bg-gray-200 text-black hover:bg-green-400'
-                            }`}
-                          >
-                            <FaCheck className="inline mr-1" /> Present
-                          </button>
-                          <button
-                            onClick={() => handleAttendanceChange(employee, 'absent')}
-                            className={`px-3 py-1 rounded ${
-                              attendance[employee] === 'absent'
-                                ? 'bg-red-300 text-white hover:bg-red-400'
-                                : 'bg-gray-200 text-black hover:bg-red-400'
-                            }`}
-                          >
-                            <FaTimes className="inline mr-1" /> Absent
-                          </button>
+              <>
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => markAllAttendance('present')}
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Mark All Present
+                  </button>
+                  <button
+                    onClick={() => markAllAttendance('absent')}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                  >
+                    Mark All Absent
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <AnimatePresence>
+                    {remainingEmployees.map((employee) => (
+                      <motion.div
+                        key={employee}
+                        className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100"
+                        initial={{ x: 0, opacity: 1 }}
+                        exit={{ x: -100, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Image
+                          src={getEmployeeImage(employee)}
+                          alt={`${employee} profile picture`}
+                          width={50}
+                          height={50}
+                          className="rounded-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = '/images/default.webp';
+                          }}
+                          unoptimized
+                        />
+                        <div className="flex-1">
+                          <span className="font-semibold">{employee}</span>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => handleAttendanceChange(employee, 'present')}
+                              className={`px-3 py-1 rounded ${
+                                attendance[employee] === 'present'
+                                  ? 'bg-green-300 text-white hover:bg-green-400'
+                                  : 'bg-gray-200 text-black hover:bg-green-400'
+                              }`}
+                            >
+                              <FaCheck className="inline mr-1" /> Present
+                            </button>
+                            <button
+                              onClick={() => handleAttendanceChange(employee, 'absent')}
+                              className={`px-3 py-1 rounded ${
+                                attendance[employee] === 'absent'
+                                  ? 'bg-red-300 text-white hover:bg-red-400'
+                                  : 'bg-gray-200 text-black hover:bg-red-400'
+                              }`}
+                            >
+                              <FaTimes className="inline mr-1" /> Absent
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </>
             ) : (
               <p className="text-sm text-gray-500">Selected date is not a working day.</p>
             )}
