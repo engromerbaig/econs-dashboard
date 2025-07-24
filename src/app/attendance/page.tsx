@@ -368,20 +368,20 @@ const isLastWorkingDayOfWeek = (dateStr: string) => {
                           <div className="flex gap-2 mt-2">
                             <button
                               onClick={() => handleAttendanceChange(employee, 'present')}
-                              className={`px-3 py-1 rounded ${
+                              className={`px-3 py-1  cursor-pointer rounded ${
                                 attendance[employee] === 'present'
                                   ? 'bg-green-300 text-white hover:bg-green-400'
-                                  : 'bg-gray-200 text-black hover:bg-green-400'
+                                  : 'bg-green-200 text-black hover:bg-green-400'
                               }`}
                             >
                               <FaCheck className="inline mr-1" /> Present
                             </button>
                             <button
                               onClick={() => handleAttendanceChange(employee, 'absent')}
-                              className={`px-3 py-1 rounded ${
+                              className={`px-3 py-1 cursor-pointer  rounded ${
                                 attendance[employee] === 'absent'
                                   ? 'bg-red-300 text-white hover:bg-red-400'
-                                  : 'bg-gray-200 text-black hover:bg-red-400'
+                                  : 'bg-red-200 text-black hover:bg-red-400'
                               }`}
                             >
                               <FaTimes className="inline mr-1" /> Absent
