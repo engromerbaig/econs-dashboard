@@ -30,6 +30,19 @@ export default function EmployeesModal({ isOpen, onClose, router }: Props) {
     return `/images/${normalizedName}.webp`;
   };
 
+  // Filter active employees based on today's date
+  const getActiveEmployees = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    return Object.keys(salaryMap).filter((employee) => {
+      const departureDate = salaryMap[employee].departureDate;
+      if (!departureDate) return true; // Current employee
+      const departure = new Date(departureDate);
+      departure.setHours(0, 0, 0, 0); // Normalize to start of day
+      return departure >= today; // Include if departure is today or future
+    });
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -49,7 +62,7 @@ export default function EmployeesModal({ isOpen, onClose, router }: Props) {
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {Object.keys(salaryMap).map((employee) => (
+          {getActiveEmployees().map((employee) => (
             <div
               key={employee}
               className="flex items-center gap-4 p-4 border rounded hover:bg-gray-100 cursor-pointer"

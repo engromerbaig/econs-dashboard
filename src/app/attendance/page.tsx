@@ -18,7 +18,7 @@ export default function AttendancePage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
-  const [attendance, setAttendance] = useState<{ [employee: string]: '' | 'present' | 'absent' }>({});
+  const [attendance, setAttendance] = useState<Record<string, '' | 'present' | 'absent'>>({});
   const [remainingEmployees, setRemainingEmployees] = useState<string[]>([]);
   const [isWorkingDay, setIsWorkingDay] = useState(true);
   const [nextWorkingDay, setNextWorkingDay] = useState<string>('');
@@ -70,6 +70,19 @@ export default function AttendancePage() {
     return selected > now;
   };
 
+  // Filter employees based on selected date and departure date
+  const getActiveEmployees = (dateStr: string) => {
+    const selected = new Date(dateStr);
+    selected.setHours(0, 0, 0, 0); // Normalize to start of day
+    return Object.keys(salaryMap).filter((employee) => {
+      const departureDate = salaryMap[employee].departureDate;
+      if (!departureDate) return true; // Current employee (no departure date)
+      const departure = new Date(departureDate);
+      departure.setHours(0, 0, 0, 0); // Normalize to start of day
+      return selected <= departure; // Include if selected date is on or before departure
+    });
+  };
+
   // Navigate to previous or next day
   const changeDate = (direction: 'prev' | 'next') => {
     const currentDate = new Date(selectedDate);
@@ -80,11 +93,19 @@ export default function AttendancePage() {
 
   // Bulk mark attendance
   const markAllAttendance = async (status: 'present' | 'absent') => {
-    const records: AttendanceRecord[] = remainingEmployees.map((employee) => ({
-      employee,
-      date: selectedDate,
-      status,
-    }));
+    const activeEmployees = getActiveEmployees(selectedDate);
+    const records: AttendanceRecord[] = remainingEmployees
+      .filter((employee) => activeEmployees.includes(employee))
+      .map((employee) => ({
+        employee,
+        date: selectedDate,
+        status,
+      }));
+
+    if (records.length === 0) {
+      toast.error('No employees to mark for this date.');
+      return;
+    }
 
     try {
       const res = await fetch('/api/attendance', {
@@ -106,12 +127,14 @@ export default function AttendancePage() {
         toast.success(`Marked all as ${status} (${data.insertedCount} records)`);
         setRemainingEmployees([]); // Clear remaining employees
         setAttendance(
-          Object.keys(salaryMap).reduce<{ [employee: string]: '' | 'present' | 'absent' }>(
+          Object.keys(salaryMap).reduce(
             (acc, employee) => ({
               ...acc,
-              [employee]: remainingEmployees.includes(employee) ? status : acc[employee] || '',
+              [employee]: activeEmployees.includes(employee) && remainingEmployees.includes(employee)
+                ? status
+                : acc[employee] || '',
             }),
-            {}
+            {} as Record<string, '' | 'present' | 'absent'>
           )
         );
       } else {
@@ -139,8 +162,9 @@ export default function AttendancePage() {
         }
 
         if (res.ok && data.status === 'success') {
+          const activeEmployees = getActiveEmployees(selectedDate);
           const markedEmployees = data.records.map((record: AttendanceRecord) => record.employee);
-          const remaining = Object.keys(salaryMap).filter(
+          const remaining = activeEmployees.filter(
             (employee) => !markedEmployees.includes(employee)
           );
           setRemainingEmployees(remaining);
@@ -148,21 +172,21 @@ export default function AttendancePage() {
             Object.keys(salaryMap).reduce(
               (acc, employee) => ({
                 ...acc,
-                [employee]: markedEmployees.includes(employee)
+                [employee]: activeEmployees.includes(employee) && markedEmployees.includes(employee)
                   ? data.records.find((r: AttendanceRecord) => r.employee === employee).status
                   : '',
               }),
-              {}
+              {} as Record<string, '' | 'present' | 'absent'>
             )
           );
         } else {
           toast.error(`Failed to fetch attendance: ${data.detail || data.message || 'Unknown error'}`);
-          setRemainingEmployees(Object.keys(salaryMap)); // Fallback to all employees on error
+          setRemainingEmployees(getActiveEmployees(selectedDate)); // Fallback to active employees
         }
       } catch (error) {
         toast.error('Failed to fetch attendance: Network issue');
         console.error('Error fetching attendance:', error);
-        setRemainingEmployees(Object.keys(salaryMap)); // Fallback to all employees on error
+        setRemainingEmployees(getActiveEmployees(selectedDate)); // Fallback to active employees
       } finally {
         setIsLoading(false);
       }

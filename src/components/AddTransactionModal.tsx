@@ -37,7 +37,7 @@ export default function AddTransactionModal({
   const [allowEditAmount, setAllowEditAmount] = useState(false);
   const [batchTransactions, setBatchTransactions] = useState<Transaction[]>([]);
   const [multipleAmounts, setMultipleAmounts] = useState<number[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get current date for max attribute
   const currentDate = new Date().toISOString().split('T')[0];
@@ -67,7 +67,6 @@ export default function AddTransactionModal({
     if (filterMode === 'month' && selectedMonth === currentMonth) {
       setDate(now.toISOString().slice(0, 10));
     } else if (filterMode === 'month') {
-      // Ensure the date is not in the future
       const selectedDate = new Date(`${selectedMonth}-01`);
       const today = new Date();
       if (selectedDate > today) {
@@ -113,6 +112,19 @@ export default function AddTransactionModal({
   const isMisc = category === 'Misc';
   const currentCategories = type === 'income' ? incomeCategories : expenseCategories;
 
+  // Filter active employees based on selected date
+  const getActiveEmployees = (dateStr: string) => {
+    const selected = new Date(dateStr);
+    selected.setHours(0, 0, 0, 0); // Normalize to start of day
+    return Object.keys(salaryMap).filter((employee) => {
+      const departureDate = salaryMap[employee].departureDate;
+      if (!departureDate) return true; // Current employee
+      const departure = new Date(departureDate);
+      departure.setHours(0, 0, 0, 0); // Normalize to start of day
+      return selected <= departure; // Include if selected date is on or before departure
+    });
+  };
+
   const transactionMonth = useMemo(() => {
     const dateObj = new Date(date);
     return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
@@ -146,7 +158,7 @@ export default function AddTransactionModal({
 
   useEffect(() => {
     if (isSalary && employee && salaryMap[employee]) {
-      setAmount(salaryMap[employee].toString());
+      setAmount(salaryMap[employee].salary.toString());
       setDescription(`Salary for ${employee}`);
       setMultipleAmounts([]);
     } else if (isFixedExpense && fixedExpense && fixedExpenseMap[fixedExpense]) {
@@ -185,12 +197,13 @@ export default function AddTransactionModal({
   };
 
   const handleAddAllSalaries = () => {
-    const unpaidEmployees = Object.keys(salaryMap).filter((emp) => !alreadyPaidEmployees.includes(emp));
+    const activeEmployees = getActiveEmployees(date);
+    const unpaidEmployees = activeEmployees.filter((emp) => !alreadyPaidEmployees.includes(emp));
     const newBatchTransactions = unpaidEmployees.map((emp, index) => ({
       id: generateUniqueId() + index,
       type: 'expense' as TransactionType,
       date,
-      amount: salaryMap[emp],
+      amount: salaryMap[emp].salary,
       category: 'Salary',
       description: `Salary for ${emp}`,
       employee: emp,
@@ -270,24 +283,22 @@ export default function AddTransactionModal({
     setAllowEditAmount(false);
     setMultipleAmounts([]);
     setBatchTransactions([]);
-    setIsSubmitting(false); // Reset loading state
+    setIsSubmitting(false);
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true); // Start loading
+    setIsSubmitting(true);
 
-    // Validate date is not in the future
     if (new Date(date) > new Date()) {
       alert('Cannot add transactions for future dates.');
-      setIsSubmitting(false); // Stop loading
+      setIsSubmitting(false);
       return;
     }
 
     if (!batchTransactions.length && !multipleAmounts.length) {
-      // Single transaction submission
       if (!amount || !date || (!category && !customCategory)) {
         alert('Fill all required fields');
-        setIsSubmitting(false); // Stop loading
+        setIsSubmitting(false);
         return;
       }
 
@@ -298,7 +309,7 @@ export default function AddTransactionModal({
         } else if (isFixedExpense) {
           alert(`${fixedExpense} already recorded for ${monthName}.`);
         }
-        setIsSubmitting(false); // Stop loading
+        setIsSubmitting(false);
         return;
       }
 
@@ -333,10 +344,9 @@ export default function AddTransactionModal({
         console.error('Submit error:', err);
         alert('Failed to submit transaction');
       } finally {
-        setIsSubmitting(false); // Stop loading
+        setIsSubmitting(false);
       }
     } else if (multipleAmounts.length) {
-      // Multiple amounts submission for Petrol or Al Azhar Prints
       const newTransactions: Transaction[] = [];
       
       try {
@@ -362,7 +372,7 @@ export default function AddTransactionModal({
 
           if (!res.ok) {
             alert(`Error adding transaction: ${data.message || 'Something went wrong'}`);
-            setIsSubmitting(false); // Stop loading
+            setIsSubmitting(false);
             return;
           }
           
@@ -376,10 +386,9 @@ export default function AddTransactionModal({
         console.error('Multiple amounts submit error:', err);
         alert('Failed to submit transactions');
       } finally {
-        setIsSubmitting(false); // Stop loading
+        setIsSubmitting(false);
       }
     } else {
-      // Batch transaction submission
       const processedTransactions: Transaction[] = [];
       
       try {
@@ -400,7 +409,7 @@ export default function AddTransactionModal({
 
           if (!res.ok) {
             alert(`Error adding ${tx.employee || tx.fixedExpense}: ${data.message || 'Something went wrong'}`);
-            setIsSubmitting(false); // Stop loading
+            setIsSubmitting(false);
             return;
           }
           
@@ -414,7 +423,7 @@ export default function AddTransactionModal({
         console.error('Batch submit error:', err);
         alert('Failed to submit batch transactions');
       } finally {
-        setIsSubmitting(false); // Stop loading
+        setIsSubmitting(false);
       }
     }
   };
@@ -443,7 +452,7 @@ export default function AddTransactionModal({
           <button
             onClick={handleAddAllSalaries}
             className="px-4 py-2 rounded bg-blue-200 disabled:opacity-50"
-            disabled={alreadyPaidEmployees.length === Object.keys(salaryMap).length}
+            disabled={getActiveEmployees(date).filter((emp) => !alreadyPaidEmployees.includes(emp)).length === 0}
           >
             Add All Salaries
           </button>
@@ -627,7 +636,7 @@ export default function AddTransactionModal({
               onChange={(e) => setEmployee(e.target.value)}
             >
               <option value="">Select Employee</option>
-              {Object.keys(salaryMap).map((emp) => {
+              {getActiveEmployees(date).map((emp) => {
                 const isPaid = isSalary && alreadyPaidEmployees.includes(emp);
                 return (
                   <option key={emp} value={emp} disabled={isPaid}>
@@ -684,16 +693,16 @@ export default function AddTransactionModal({
         </>
       )}
 
-  <button
-  onClick={handleSubmit}
-  className="w-full bg-black  text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-  disabled={isSubmitting}
->
-  {isSubmitting && (
-    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-  )}
-  {isSubmitting ? 'Adding' : batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Add All' : 'Add'}
-</button>
+      <button
+        onClick={handleSubmit}
+        className="w-full bg-black text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        disabled={isSubmitting}
+      >
+        {isSubmitting && (
+          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+        )}
+        {isSubmitting ? 'Adding' : batchTransactions.length > 0 || multipleAmounts.length > 0 ? 'Add All' : 'Add'}
+      </button>
     </Modal>
   );
 }
