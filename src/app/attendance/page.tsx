@@ -39,16 +39,46 @@ export default function AttendancePage() {
   const isWorkingDayCheck = (dateStr: string) => {
     const date = new Date(dateStr);
     const day = date.getDay();
-    // Monday to Friday (1 to 5) are working days
-    if (day >= 1 && day <= 5) return true;
-    // Sundays (0) are not working days
-    if (day === 0) return false;
-    // Saturdays: alternate starting from July 26, 2025 (open)
+    if (day >= 1 && day <= 5) return true; // Monday to Friday
+    if (day === 0) return false; // Sunday
     const referenceDate = new Date('2025-07-26');
     const diffDays = Math.floor((date.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24));
     const weeks = Math.floor(diffDays / 7);
     return weeks % 2 === 0; // Even weeks from July 26 are open
   };
+
+  // Determine if the selected date is the last working day of the week
+// Determine if the selected date is the last working day of the week
+const isLastWorkingDayOfWeek = (dateStr: string) => {
+  const date = new Date(dateStr);
+  date.setHours(0, 0, 0, 0); // Normalize to start of day
+  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // Find Saturday of the same week
+  const saturday = new Date(date);
+  saturday.setDate(date.getDate() + (6 - day)); // Move to Saturday of current week
+  const saturdayDateStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`;
+  
+  // Check if Saturday is a working day (using the existing isWorkingDayCheck function)
+  const isSaturdayOpen = isWorkingDayCheck(saturdayDateStr);
+  
+  console.log(`Date: ${dateStr}, Day: ${day}, Saturday (${saturdayDateStr}) Open: ${isSaturdayOpen}`); // Debug log
+  
+  if (isSaturdayOpen && day === 6) {
+    // If Saturday is open and current date is Saturday, it's the last working day
+    console.log(`${dateStr} is Saturday and last working day (even week)`);
+    return true;
+  }
+  
+  if (!isSaturdayOpen && day === 5) {
+    // If Saturday is closed and current date is Friday, it's the last working day
+    console.log(`${dateStr} is Friday and last working day (odd week - Saturday closed)`);
+    return true;
+  }
+  
+  console.log(`${dateStr} is not the last working day`);
+  return false;
+};
 
   // Calculate next working day
   const getNextWorkingDay = (currentDate: string) => {
@@ -66,20 +96,31 @@ export default function AttendancePage() {
   const isFutureDate = (dateStr: string) => {
     const selected = new Date(dateStr);
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Normalize to start of day
+    now.setHours(0, 0, 0, 0);
     return selected > now;
   };
 
-  // Filter employees based on selected date and departure date
+  // Filter employees based on selected date and exclude Lawyer/Cleaner
   const getActiveEmployees = (dateStr: string) => {
     const selected = new Date(dateStr);
-    selected.setHours(0, 0, 0, 0); // Normalize to start of day
+    selected.setHours(0, 0, 0, 0);
+    const isLastDay = isLastWorkingDayOfWeek(dateStr);
     return Object.keys(salaryMap).filter((employee) => {
+      if (employee === 'Lawyer' || employee === 'Cleaner') return false; // Exclude Lawyer and Cleaner
+      if (employee === 'Usman' && !isLastDay) {
+        console.log(`Excluding Usman for ${dateStr} (not last working day)`); // Debug log
+        return false; // Usman only on last working day
+      }
       const departureDate = salaryMap[employee].departureDate;
-      if (!departureDate) return true; // Current employee (no departure date)
+      if (!departureDate) {
+        console.log(`Including ${employee} for ${dateStr} (no departure date)`); // Debug log
+        return true; // Current employee
+      }
       const departure = new Date(departureDate);
-      departure.setHours(0, 0, 0, 0); // Normalize to start of day
-      return selected <= departure; // Include if selected date is on or before departure
+      departure.setHours(0, 0, 0, 0);
+      const isActive = selected <= departure;
+      console.log(`Checking ${employee} for ${dateStr}: Departure ${departureDate}, Active: ${isActive}`); // Debug log
+      return isActive; // Include if selected date is on or before departure
     });
   };
 
@@ -125,7 +166,7 @@ export default function AttendancePage() {
 
       if (res.ok && data.status === 'success') {
         toast.success(`Marked all as ${status} (${data.insertedCount} records)`);
-        setRemainingEmployees([]); // Clear remaining employees
+        setRemainingEmployees([]);
         setAttendance(
           Object.keys(salaryMap).reduce(
             (acc, employee) => ({
@@ -163,10 +204,12 @@ export default function AttendancePage() {
 
         if (res.ok && data.status === 'success') {
           const activeEmployees = getActiveEmployees(selectedDate);
+          console.log(`Active employees for ${selectedDate}:`, activeEmployees); // Debug log
           const markedEmployees = data.records.map((record: AttendanceRecord) => record.employee);
           const remaining = activeEmployees.filter(
             (employee) => !markedEmployees.includes(employee)
           );
+          console.log(`Remaining employees for ${selectedDate}:`, remaining); // Debug log
           setRemainingEmployees(remaining);
           setAttendance(
             Object.keys(salaryMap).reduce(
@@ -181,12 +224,12 @@ export default function AttendancePage() {
           );
         } else {
           toast.error(`Failed to fetch attendance: ${data.detail || data.message || 'Unknown error'}`);
-          setRemainingEmployees(getActiveEmployees(selectedDate)); // Fallback to active employees
+          setRemainingEmployees(getActiveEmployees(selectedDate));
         }
       } catch (error) {
         toast.error('Failed to fetch attendance: Network issue');
         console.error('Error fetching attendance:', error);
-        setRemainingEmployees(getActiveEmployees(selectedDate)); // Fallback to active employees
+        setRemainingEmployees(getActiveEmployees(selectedDate));
       } finally {
         setIsLoading(false);
       }
