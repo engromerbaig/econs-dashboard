@@ -6,18 +6,12 @@ import { Transaction } from '@/components/types';
 import TransactionList from '@/components/TransactionList';
 import TransactionSummary from '@/components/TransactionSummary';
 import MonthlyNetProfitChart from '@/components/MonthlyNetProfitChart';
-import EmployeesModal from '@/components/EmployeesModal';
 import { exportTransactionsToCSV } from '@/lib/exportTransactionsToCSV';
 import { FaArrowUp, FaArrowDown, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { CiLogout } from 'react-icons/ci';
-import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const router = useRouter();
-
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<'month' | '3m' | '6m' | '1y' | '3y' | 'all'>('month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -66,11 +60,6 @@ export default function DashboardPage() {
         return txId !== transactionId;
       })
     );
-  };
-
-  const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    router.push('/');
   };
 
   const toggleVisibility = (box: keyof typeof hiddenBoxes) => {
@@ -138,39 +127,6 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Top Navbar */}
-      <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
-        <h1 className="text-lg text-white font-semibold">Econs Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setIsEmployeesModalOpen(true)}
-            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-          >
-            Employees
-          </button>
-          <button
-            onClick={() => router.push('/attendance')}
-            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-          >
-            Mark Attendance
-          </button>
-          <button
-            onClick={handleLogout}
-            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-          >
-            <CiLogout className="inline mr-2" />
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Employees Modal */}
-      <EmployeesModal
-        isOpen={isEmployeesModalOpen}
-        onClose={() => setIsEmployeesModalOpen(false)}
-        router={router}
-      />
-
       <div className="p-6">
         {/* Summary Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">

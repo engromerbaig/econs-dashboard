@@ -107,28 +107,7 @@ export default function AttendancePage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Top Navbar */}
-      <div className="bg-econs-blue border-b px-6 py-3 flex justify-between items-center">
-        <h1 className="text-lg text-white font-semibold">Mark Attendance</h1>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={async () => {
-              await fetch('/api/logout', { method: 'POST' });
-              router.push('/');
-            }}
-            className="bg-black text-white px-4 py-1 rounded cursor-pointer hover:bg-black/80"
-          >
-            <CiLogout className="inline mr-2" />
-            Logout
-          </button>
-        </div>
-      </div>
+     
 
       <div className="p-6">
         <Toaster position="top-right" />
